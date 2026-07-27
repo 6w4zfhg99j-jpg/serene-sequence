@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { localBridge } from "./local-bridge";
 
 export type Difficulty = "beginner" | "intermediate" | "advanced";
 export type Level = "all-levels" | "beginner" | "intermediate" | "advanced";
@@ -73,7 +74,13 @@ function normalizePose(raw: any): Pose {
   } as Pose;
 }
 
+// ------------------------------------------------------------------
+// Categories / Tags / Poses
+// ------------------------------------------------------------------
+
 export async function fetchCategories(): Promise<Category[]> {
+  const local = localBridge();
+  if (local) return local.categories.list();
   const { data, error } = await supabase
     .from("categories")
     .select("*")
@@ -83,12 +90,16 @@ export async function fetchCategories(): Promise<Category[]> {
 }
 
 export async function fetchTags(): Promise<Tag[]> {
+  const local = localBridge();
+  if (local) return local.tags.list();
   const { data, error } = await supabase.from("tags").select("*").order("name");
   if (error) throw error;
   return data as Tag[];
 }
 
 export async function fetchPoses(): Promise<Pose[]> {
+  const local = localBridge();
+  if (local) return local.poses.list();
   const { data, error } = await supabase
     .from("poses")
     .select(POSE_SELECT)
@@ -109,6 +120,8 @@ export async function upsertPose(input: {
   categoryIds: string[];
   tagIds: string[];
 }) {
+  const local = localBridge();
+  if (local) return local.poses.upsert(input);
   const { categoryIds, tagIds, id, ...fields } = input;
   let poseId = id;
   if (poseId) {
@@ -123,7 +136,6 @@ export async function upsertPose(input: {
     if (error) throw error;
     poseId = data.id;
   }
-  // Reset joins
   await supabase.from("pose_categories").delete().eq("pose_id", poseId);
   await supabase.from("pose_tags").delete().eq("pose_id", poseId);
   if (categoryIds.length) {
@@ -140,6 +152,8 @@ export async function upsertPose(input: {
 }
 
 export async function toggleFavorite(pose: Pose) {
+  const local = localBridge();
+  if (local) return local.poses.toggleFavorite(pose.id, !pose.is_favorite);
   const { error } = await supabase
     .from("poses")
     .update({ is_favorite: !pose.is_favorite })
@@ -148,11 +162,15 @@ export async function toggleFavorite(pose: Pose) {
 }
 
 export async function deletePose(id: string) {
+  const local = localBridge();
+  if (local) return local.poses.remove(id);
   const { error } = await supabase.from("poses").delete().eq("id", id);
   if (error) throw error;
 }
 
 export async function createTag(name: string): Promise<Tag> {
+  const local = localBridge();
+  if (local) return local.tags.create(name);
   const trimmed = name.trim().replace(/^#/, "").toLowerCase();
   if (!trimmed) throw new Error("Empty tag");
   const { data, error } = await supabase
@@ -164,11 +182,30 @@ export async function createTag(name: string): Promise<Tag> {
   return data as Tag;
 }
 
-// ---------- Image storage helpers ----------
+// ------------------------------------------------------------------
+// Images
+// ------------------------------------------------------------------
 
 export const IMAGES_BUCKET = "pose-images";
 
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => {
+      const s = String(r.result ?? "");
+      resolve(s.includes(",") ? s.split(",")[1] : s);
+    };
+    r.onerror = () => reject(r.error);
+    r.readAsDataURL(file);
+  });
+}
+
 export async function uploadPoseImage(file: File): Promise<string> {
+  const local = localBridge();
+  if (local) {
+    const b64 = await fileToBase64(file);
+    return local.images.importBase64(file.name, b64);
+  }
   const ext = file.name.split(".").pop() ?? "jpg";
   const path = `${crypto.randomUUID()}.${ext}`;
   const { error } = await supabase.storage
@@ -179,11 +216,14 @@ export async function uploadPoseImage(file: File): Promise<string> {
 }
 
 export async function getSignedImageUrls(paths: string[]): Promise<Record<string, string>> {
+  // In local mode paths are already resolvable URIs (local://...) — resolveImage
+  // shortcircuits them and never asks for a signed URL.
+  if (localBridge()) return {};
   const uniques = Array.from(new Set(paths.filter(Boolean)));
   if (uniques.length === 0) return {};
   const { data, error } = await supabase.storage
     .from(IMAGES_BUCKET)
-    .createSignedUrls(uniques, 60 * 60 * 24); // 24h
+    .createSignedUrls(uniques, 60 * 60 * 24);
   if (error) throw error;
   const map: Record<string, string> = {};
   data?.forEach((row) => {
@@ -192,15 +232,19 @@ export async function getSignedImageUrls(paths: string[]): Promise<Record<string
   return map;
 }
 
-// ---------- Sequences ----------
+// ------------------------------------------------------------------
+// Sequences
+// ------------------------------------------------------------------
 
 export async function fetchSequences(): Promise<SequenceListItem[]> {
+  const local = localBridge();
+  if (local) return local.sequences.list();
   const { data, error } = await supabase
     .from("sequences")
     .select(
       `id, title, description, level, created_at, updated_at,
        tags:sequence_tags(tag:tags(id,name)),
-       items:sequence_poses(duration_seconds, pose:poses(duration_seconds))`
+       items:sequence_poses(duration_seconds, pose:poses(duration_seconds))`,
     )
     .order("updated_at", { ascending: false });
   if (error) throw error;
@@ -215,19 +259,21 @@ export async function fetchSequences(): Promise<SequenceListItem[]> {
     total_duration_seconds: (r.items ?? []).reduce(
       (sum: number, it: any) =>
         sum + (it.duration_seconds ?? it.pose?.duration_seconds ?? 0),
-      0
+      0,
     ),
     tags: (r.tags ?? []).map((t: any) => t.tag).filter(Boolean),
   }));
 }
 
 export async function fetchSequence(id: string): Promise<Sequence> {
+  const local = localBridge();
+  if (local) return local.sequences.get(id);
   const { data, error } = await supabase
     .from("sequences")
     .select(
       `*, tags:sequence_tags(tag:tags(id,name)),
        items:sequence_poses(id, sequence_id, pose_id, position, notes, duration_seconds, side,
-         pose:poses(${POSE_SELECT}))`
+         pose:poses(${POSE_SELECT}))`,
     )
     .eq("id", id)
     .single();
@@ -246,6 +292,8 @@ export async function createSequence(input: {
   description?: string;
   level?: Level;
 }): Promise<string> {
+  const local = localBridge();
+  if (local) return local.sequences.create(input);
   const { data, error } = await supabase
     .from("sequences")
     .insert({
@@ -261,13 +309,17 @@ export async function createSequence(input: {
 
 export async function updateSequence(
   id: string,
-  patch: { title?: string; description?: string | null; level?: Level }
+  patch: { title?: string; description?: string | null; level?: Level },
 ) {
+  const local = localBridge();
+  if (local) return local.sequences.update(id, patch);
   const { error } = await supabase.from("sequences").update(patch).eq("id", id);
   if (error) throw error;
 }
 
 export async function setSequenceTags(sequenceId: string, tagIds: string[]) {
+  const local = localBridge();
+  if (local) return local.sequences.setTags(sequenceId, tagIds);
   await supabase.from("sequence_tags").delete().eq("sequence_id", sequenceId);
   if (tagIds.length) {
     await supabase
@@ -277,11 +329,15 @@ export async function setSequenceTags(sequenceId: string, tagIds: string[]) {
 }
 
 export async function deleteSequence(id: string) {
+  const local = localBridge();
+  if (local) return local.sequences.remove(id);
   const { error } = await supabase.from("sequences").delete().eq("id", id);
   if (error) throw error;
 }
 
 export async function duplicateSequence(id: string): Promise<string> {
+  const local = localBridge();
+  if (local) return local.sequences.duplicate(id);
   const src = await fetchSequence(id);
   const newId = await createSequence({
     title: src.title + " (copy)",
@@ -298,13 +354,15 @@ export async function duplicateSequence(id: string): Promise<string> {
         notes: it.notes,
         duration_seconds: it.duration_seconds,
         side: it.side,
-      }))
+      })),
     );
   }
   return newId;
 }
 
 export async function addPoseToSequence(sequenceId: string, poseId: string) {
+  const local = localBridge();
+  if (local) return local.sequences.addPose(sequenceId, poseId);
   const { data: last } = await supabase
     .from("sequence_poses")
     .select("position")
@@ -319,11 +377,15 @@ export async function addPoseToSequence(sequenceId: string, poseId: string) {
 }
 
 export async function removeSequenceItem(itemId: string) {
+  const local = localBridge();
+  if (local) return local.sequences.removeItem(itemId);
   const { error } = await supabase.from("sequence_poses").delete().eq("id", itemId);
   if (error) throw error;
 }
 
 export async function duplicateSequenceItem(item: SequencePoseItem) {
+  const local = localBridge();
+  if (local) return local.sequences.duplicateItem(item);
   const { data: last } = await supabase
     .from("sequence_poses")
     .select("position")
@@ -344,20 +406,26 @@ export async function duplicateSequenceItem(item: SequencePoseItem) {
 
 export async function updateSequenceItem(
   itemId: string,
-  patch: { notes?: string | null; duration_seconds?: number | null; side?: string | null }
+  patch: { notes?: string | null; duration_seconds?: number | null; side?: string | null },
 ) {
+  const local = localBridge();
+  if (local) return local.sequences.updateItem(itemId, patch);
   const { error } = await supabase.from("sequence_poses").update(patch).eq("id", itemId);
   if (error) throw error;
 }
 
 export async function reorderSequenceItems(sequenceId: string, orderedIds: string[]) {
-  // Update sequentially — small lists.
+  const local = localBridge();
+  if (local) return local.sequences.reorder(sequenceId, orderedIds);
   await Promise.all(
     orderedIds.map((id, idx) =>
-      supabase.from("sequence_poses").update({ position: idx }).eq("id", id)
-    )
+      supabase.from("sequence_poses").update({ position: idx }).eq("id", id),
+    ),
   );
-  await supabase.from("sequences").update({ updated_at: new Date().toISOString() }).eq("id", sequenceId);
+  await supabase
+    .from("sequences")
+    .update({ updated_at: new Date().toISOString() })
+    .eq("id", sequenceId);
 }
 
 export function formatDuration(seconds: number | null | undefined): string {
