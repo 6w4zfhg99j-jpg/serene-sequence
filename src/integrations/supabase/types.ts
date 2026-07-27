@@ -14,7 +14,249 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      categories: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      pose_categories: {
+        Row: {
+          category_id: string
+          pose_id: string
+        }
+        Insert: {
+          category_id: string
+          pose_id: string
+        }
+        Update: {
+          category_id?: string
+          pose_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pose_categories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pose_categories_pose_id_fkey"
+            columns: ["pose_id"]
+            isOneToOne: false
+            referencedRelation: "poses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pose_tags: {
+        Row: {
+          pose_id: string
+          tag_id: string
+        }
+        Insert: {
+          pose_id: string
+          tag_id: string
+        }
+        Update: {
+          pose_id?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pose_tags_pose_id_fkey"
+            columns: ["pose_id"]
+            isOneToOne: false
+            referencedRelation: "poses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pose_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      poses: {
+        Row: {
+          created_at: string
+          description: string | null
+          difficulty: string
+          duration_seconds: number | null
+          id: string
+          image_url: string | null
+          is_favorite: boolean
+          name: string
+          sanskrit_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          difficulty?: string
+          duration_seconds?: number | null
+          id?: string
+          image_url?: string | null
+          is_favorite?: boolean
+          name: string
+          sanskrit_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          difficulty?: string
+          duration_seconds?: number | null
+          id?: string
+          image_url?: string | null
+          is_favorite?: boolean
+          name?: string
+          sanskrit_name?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sequence_poses: {
+        Row: {
+          created_at: string
+          duration_seconds: number | null
+          id: string
+          notes: string | null
+          pose_id: string
+          position: number
+          sequence_id: string
+          side: string | null
+        }
+        Insert: {
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          notes?: string | null
+          pose_id: string
+          position: number
+          sequence_id: string
+          side?: string | null
+        }
+        Update: {
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          notes?: string | null
+          pose_id?: string
+          position?: number
+          sequence_id?: string
+          side?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sequence_poses_pose_id_fkey"
+            columns: ["pose_id"]
+            isOneToOne: false
+            referencedRelation: "poses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sequence_poses_sequence_id_fkey"
+            columns: ["sequence_id"]
+            isOneToOne: false
+            referencedRelation: "sequences"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sequence_tags: {
+        Row: {
+          sequence_id: string
+          tag_id: string
+        }
+        Insert: {
+          sequence_id: string
+          tag_id: string
+        }
+        Update: {
+          sequence_id?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sequence_tags_sequence_id_fkey"
+            columns: ["sequence_id"]
+            isOneToOne: false
+            referencedRelation: "sequences"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sequence_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sequences: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          level: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          level?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          level?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      tags: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
