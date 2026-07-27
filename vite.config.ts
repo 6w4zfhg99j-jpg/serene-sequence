@@ -12,4 +12,6 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  // Relative base so the Electron shell can load built assets via file://
+  vite: { base: "./" },
 });

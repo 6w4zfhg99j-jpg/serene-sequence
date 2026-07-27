@@ -45,12 +45,10 @@ import {
   updateSequence,
   updateSequenceItem,
   type Level,
-  type Pose,
   type SequencePoseItem,
 } from "@/lib/yoga-api";
-import { PoseCard } from "@/components/PoseCard";
+import { BuilderLibrary } from "@/components/BuilderLibrary";
 import { PoseImage } from "@/components/PoseImage";
-import { PoseFiltersPanel, usePoseFilters } from "@/components/PoseFilters";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -98,7 +96,6 @@ function SequenceEditor() {
   const { data: poses = [] } = useQuery({ queryKey: ["poses"], queryFn: fetchPoses });
   const { data: categories = [] } = useQuery({ queryKey: ["categories"], queryFn: fetchCategories });
   const { data: tags = [] } = useQuery({ queryKey: ["tags"], queryFn: fetchTags });
-  const { filters, setFilters, filtered } = usePoseFilters(poses);
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["sequence", id] });
 
@@ -300,23 +297,12 @@ function SequenceEditor() {
       </div>
 
       {/* Two-panel */}
-      <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
+      <div className="grid gap-6 lg:grid-cols-[minmax(320px,420px)_1fr]">
         {/* Library */}
-        <section className="rounded-2xl border border-line bg-surface p-4">
+        <section className="flex max-h-[calc(100vh-14rem)] flex-col rounded-2xl border border-line bg-surface p-4">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="font-serif text-xl">Pose library</h2>
-            <span className="text-xs text-ink-subtle">
-              {filtered.length} / {poses.length}
-            </span>
-          </div>
-          <div className="mb-4">
-            <PoseFiltersPanel
-              categories={categories}
-              tags={tags}
-              filters={filters}
-              setFilters={setFilters}
-              compact
-            />
+            <span className="text-xs text-ink-subtle">{poses.length}</span>
           </div>
           {poses.length === 0 ? (
             <div className="rounded-lg border border-dashed border-line p-8 text-center text-sm text-ink-muted">
@@ -326,17 +312,11 @@ function SequenceEditor() {
               </a>
             </div>
           ) : (
-            <div className="grid max-h-[70vh] grid-cols-2 gap-3 overflow-y-auto pr-1 md:grid-cols-3">
-              {filtered.map((p) => (
-                <PoseCard
-                  key={p.id}
-                  pose={p}
-                  onAdd={() => addPose.mutate(p.id)}
-                  onClick={() => addPose.mutate(p.id)}
-                  compact
-                />
-              ))}
-            </div>
+            <BuilderLibrary
+              poses={poses}
+              categories={categories}
+              onAdd={(p) => addPose.mutate(p.id)}
+            />
           )}
         </section>
 
