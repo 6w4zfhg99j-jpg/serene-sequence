@@ -1,9 +1,9 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 
 const NAV = [
-  { to: "/", label: "Sequences" },
+  { to: "/builder", label: "Create Sequence" },
   { to: "/library", label: "Pose Library" },
-  { to: "/builder", label: "Build" },
+  { to: "/", label: "Saved Sequences" },
 ] as const;
 
 export function AppNav() {
@@ -20,7 +20,9 @@ export function AppNav() {
             const active =
               item.to === "/"
                 ? pathname === "/"
-                : pathname === item.to || pathname.startsWith(item.to + "/");
+                : pathname === item.to ||
+                  pathname.startsWith(item.to + "/") ||
+                  (item.to === "/builder" && pathname.startsWith("/sequences/"));
             return (
               <Link
                 key={item.to}
