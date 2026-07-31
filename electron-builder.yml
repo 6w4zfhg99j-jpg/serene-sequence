@@ -4,7 +4,7 @@ copyright: VONA Personal Yoga Studio
 
 directories:
   output: release
-  buildResources: build
+  buildResources: public
 
 # Only the offline desktop runtime + the prebuilt SPA are shipped.
 files:
@@ -31,7 +31,7 @@ mac:
   # Unsigned local build — no Apple Developer account required.
   identity: null
   gatekeeperAssess: false
-  icon: build/icon.png
+  icon: public/icon.png
   extendInfo:
     CFBundleName: VONA
     CFBundleDisplayName: VONA
@@ -39,7 +39,7 @@ mac:
 dmg:
   title: VONA
   artifactName: VONA-${version}-${arch}.dmg
-  icon: build/icon.png
+  icon: public/icon.png
   window:
     width: 540
     height: 380
