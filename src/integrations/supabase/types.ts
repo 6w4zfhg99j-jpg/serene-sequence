@@ -35,6 +35,41 @@ export type Database = {
         }
         Relationships: []
       }
+      folders: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          parent_id: string | null
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          parent_id?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          parent_id?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "folders_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pose_categories: {
         Row: {
           category_id: string
@@ -227,6 +262,7 @@ export type Database = {
         Row: {
           created_at: string
           description: string | null
+          folder_id: string | null
           id: string
           level: string
           title: string
@@ -235,6 +271,7 @@ export type Database = {
         Insert: {
           created_at?: string
           description?: string | null
+          folder_id?: string | null
           id?: string
           level?: string
           title: string
@@ -243,12 +280,21 @@ export type Database = {
         Update: {
           created_at?: string
           description?: string | null
+          folder_id?: string | null
           id?: string
           level?: string
           title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "sequences_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subcategories: {
         Row: {
