@@ -1,0 +1,46 @@
+appId: com.asana.yoga
+productName: Asana
+copyright: Asana Personal Yoga Studio
+
+directories:
+  output: release
+  buildResources: build
+
+# Only the offline desktop runtime + the prebuilt SPA are shipped.
+files:
+  - electron/**/*
+  - dist/client/**/*
+  - package.json
+  - "!**/*.map"
+
+# better-sqlite3 is a native module and must stay outside the asar archive.
+asarUnpack:
+  - "**/node_modules/better-sqlite3/**"
+
+npmRebuild: true
+
+mac:
+  category: public.app-category.healthcare-fitness
+  target:
+    - target: dmg
+      arch:
+        - arm64
+  darkModeSupport: false
+  # Unsigned local build — no Apple Developer account required.
+  identity: null
+  gatekeeperAssess: false
+  icon: build/icon.png
+
+dmg:
+  title: Asana
+  window:
+    width: 540
+    height: 380
+  contents:
+    - x: 140
+      y: 190
+      type: file
+    - x: 400
+      y: 190
+      type: link
+      path: /Applications
