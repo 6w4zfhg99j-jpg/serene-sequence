@@ -35,6 +35,7 @@ import {
   deleteSequence,
   duplicateSequenceItem,
   fetchCategories,
+  fetchSubcategories,
   fetchPoses,
   fetchSequence,
   fetchTags,
@@ -95,6 +96,7 @@ function SequenceEditor() {
   });
   const { data: poses = [] } = useQuery({ queryKey: ["poses"], queryFn: fetchPoses });
   const { data: categories = [] } = useQuery({ queryKey: ["categories"], queryFn: fetchCategories });
+  const { data: subcategories = [] } = useQuery({ queryKey: ["subcategories"], queryFn: fetchSubcategories });
   const { data: tags = [] } = useQuery({ queryKey: ["tags"], queryFn: fetchTags });
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["sequence", id] });
@@ -317,6 +319,7 @@ function SequenceEditor() {
             <BuilderLibrary
               poses={poses}
               categories={categories}
+              subcategories={subcategories}
               onAdd={(p) => addPose.mutate(p.id)}
             />
           )}
