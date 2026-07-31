@@ -8,6 +8,7 @@ interface Props {
   onFavorite?: () => void;
   onAdd?: () => void;
   compact?: boolean;
+  dense?: boolean;
 }
 
 export function PoseCard({ pose, onClick, onFavorite, onAdd, compact, dense }: Props) {
