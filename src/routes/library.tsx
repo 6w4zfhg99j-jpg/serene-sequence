@@ -193,6 +193,7 @@ function CategoryGroupedGrid({
   filters,
   onEdit,
   onFavorite,
+  onReorder,
 }: {
   poses: Pose[];
   categories: Category[];
@@ -200,6 +201,7 @@ function CategoryGroupedGrid({
   filters: { categoryId: string | null };
   onEdit: (p: Pose) => void;
   onFavorite: (p: Pose) => void;
+  onReorder: (activeId: string, overId: string) => void;
 }) {
   const groups = useMemo<Group[]>(() => {
     // When a specific category is selected via the filter, render that single
@@ -242,6 +244,7 @@ function CategoryGroupedGrid({
             subcategories={subcategories}
             onEdit={onEdit}
             onFavorite={onFavorite}
+            onReorder={onReorder}
           />
           {i < groups.length - 1 && (
             <div className="pt-4 text-center text-ink-subtle">─────</div>
