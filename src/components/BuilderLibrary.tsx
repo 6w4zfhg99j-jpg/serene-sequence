@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronRight, Heart, Search } from "lucide-react";
-import type { Category, Pose } from "@/lib/yoga-api";
+import type { Category, Pose, Subcategory } from "@/lib/yoga-api";
 import { PoseImage } from "./PoseImage";
 import { Input } from "@/components/ui/input";
 
@@ -10,6 +10,7 @@ const OTHER = "__other__";
 interface Props {
   poses: Pose[];
   categories: Category[];
+  subcategories?: Subcategory[];
   onAdd: (pose: Pose) => void;
 }
 
