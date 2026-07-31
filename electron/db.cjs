@@ -70,6 +70,11 @@ function init(dbPath) {
       category_id TEXT NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
       PRIMARY KEY (pose_id, category_id)
     );
+    CREATE TABLE IF NOT EXISTS pose_subcategories (
+      pose_id TEXT NOT NULL REFERENCES poses(id) ON DELETE CASCADE,
+      subcategory_id TEXT NOT NULL REFERENCES subcategories(id) ON DELETE CASCADE,
+      PRIMARY KEY (pose_id, subcategory_id)
+    );
     CREATE TABLE IF NOT EXISTS pose_tags (
       pose_id TEXT NOT NULL REFERENCES poses(id) ON DELETE CASCADE,
       tag_id TEXT NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
