@@ -42,7 +42,11 @@ export interface Pose {
   is_favorite: boolean;
   created_at: string;
   updated_at: string;
+  /** Kept for backwards compatibility — mirrors the first entry of subcategory_ids. */
   subcategory_id: string | null;
+  /** A pose can belong to several subcategories, across one or more categories. */
+  subcategory_ids: string[];
+  sort_order: number;
   categories: Category[];
   tags: Tag[];
 }
