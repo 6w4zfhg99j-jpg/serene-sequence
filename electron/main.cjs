@@ -127,6 +127,7 @@ app.whenReady().then(() => {
 
   handle("poses.list", () => db.listPoses());
   handle("poses.upsert", (_e, input) => db.upsertPose(input));
+  handle("poses.reorder", (_e, orderedIds) => db.reorderPoses(orderedIds));
   handle("poses.toggleFavorite", (_e, id, next) => db.toggleFavorite(id, next));
   handle("poses.remove", (_e, id) => db.removePose(id));
 

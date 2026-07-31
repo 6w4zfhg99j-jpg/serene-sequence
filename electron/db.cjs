@@ -792,6 +792,7 @@ module.exports = {
 
   listPoses,
   upsertPose,
+  reorderPoses,
   toggleFavorite,
   removePose,
   listFolders,
