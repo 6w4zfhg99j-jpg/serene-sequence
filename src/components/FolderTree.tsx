@@ -55,6 +55,7 @@ export function FolderTree({
   onDelete,
   onDropSequence,
 }: FolderTreeProps) {
+  const t = useT();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
