@@ -26,5 +26,5 @@ What that single command does:
   the 16 default categories; poses and sequences start empty — the desktop app
   does not read the cloud preview's data.
 - Dev mode: `npm run dev` in one terminal, `npm run electron:dev` in another.
-- Config lives in `electron-builder.yml`; the app icon is `build/icon.png`.
+- Config lives in `electron-builder.yml`; the app icon is `public/icon.png`.
 

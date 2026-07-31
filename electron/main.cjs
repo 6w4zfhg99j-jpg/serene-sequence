@@ -41,7 +41,9 @@ function createWindow() {
     width: 1400,
     height: 900,
     backgroundColor: "#fbf9f4",
-    icon: path.join(__dirname, "..", "public", "icon.png"),
+    icon: isDev
+      ? path.join(__dirname, "..", "public", "icon.png")
+      : path.join(CLIENT_DIR, "icon.png"),
     webPreferences: {
       preload: path.join(__dirname, "preload.cjs"),
       contextIsolation: true,
