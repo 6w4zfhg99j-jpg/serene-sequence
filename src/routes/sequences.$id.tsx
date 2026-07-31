@@ -189,7 +189,7 @@ function SequenceEditor() {
     if (!seq) return;
     setExporting(true);
     try {
-      await exportSequencePdf(seq, { includeNotes });
+      await exportSequencePdf(seq, { includeNotes, layout });
       setShowExport(false);
     } catch (e: any) {
       toast.error(e.message ?? "Export failed");
