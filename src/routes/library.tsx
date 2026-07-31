@@ -163,17 +163,24 @@ function CategorySection({
       {visible.length === 0 ? (
         <p className="py-4 text-xs text-ink-subtle">{t("common.noSubcategoryPoses")}</p>
       ) : (
-        <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-          {visible.map((p) => (
-            <PoseCard
-              key={p.id}
-              pose={p}
-              dense
-              onClick={() => onEdit(p)}
-              onFavorite={() => onFavorite(p)}
-            />
-          ))}
-        </div>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext items={visible.map((p) => p.id)} strategy={rectSortingStrategy}>
+            <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+              {visible.map((p) => (
+                <SortablePoseCard
+                  key={p.id}
+                  pose={p}
+                  onEdit={onEdit}
+                  onFavorite={onFavorite}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
       )}
     </section>
   );
