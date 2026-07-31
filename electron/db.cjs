@@ -407,6 +407,88 @@ function removePose(id) {
   db.prepare("DELETE FROM poses WHERE id = ?").run(id);
 }
 
+// ---------- Folders ----------
+
+function listFolders() {
+  return db
+    .prepare(
+      `SELECT f.id, f.name, f.parent_id, f.sort_order, f.created_at, f.updated_at,
+        (SELECT COUNT(*) FROM sequences s WHERE s.folder_id = f.id) AS sequence_count
+       FROM folders f ORDER BY f.sort_order, f.name`,
+    )
+    .all();
+}
+
+function createFolder(rawName, parentId = null) {
+  const name = String(rawName ?? "").trim();
+  if (!name) throw new Error("Empty folder name");
+  const max = db
+    .prepare(
+      parentId
+        ? "SELECT COALESCE(MAX(sort_order), -1) AS m FROM folders WHERE parent_id = ?"
+        : "SELECT COALESCE(MAX(sort_order), -1) AS m FROM folders WHERE parent_id IS NULL",
+    )
+    .get(...(parentId ? [parentId] : [])).m;
+  const id = randomUUID();
+  db.prepare(
+    "INSERT INTO folders (id, name, parent_id, sort_order) VALUES (?, ?, ?, ?)",
+  ).run(id, name, parentId ?? null, max + 1);
+  return { id, name, parent_id: parentId ?? null, sort_order: max + 1, sequence_count: 0 };
+}
+
+function updateFolder(id, name) {
+  const clean = String(name ?? "").trim();
+  if (!clean) throw new Error("Empty folder name");
+  db.prepare("UPDATE folders SET name = ?, updated_at = ? WHERE id = ?").run(
+    clean,
+    now(),
+    id,
+  );
+}
+
+/** Delete a folder (and nested folders); their sequences fall back to the main area. */
+function deleteFolder(id) {
+  const ids = [id];
+  for (let i = 0; i < ids.length; i++) {
+    const kids = db
+      .prepare("SELECT id FROM folders WHERE parent_id = ?")
+      .all(ids[i])
+      .map((r) => r.id);
+    ids.push(...kids);
+  }
+  const placeholders = ids.map(() => "?").join(",");
+  const tx = db.transaction(() => {
+    db.prepare(
+      `UPDATE sequences SET folder_id = NULL WHERE folder_id IN (${placeholders})`,
+    ).run(...ids);
+    db.prepare(`DELETE FROM folders WHERE id IN (${placeholders})`).run(...ids);
+  });
+  tx();
+}
+
+function moveFolder(id, parentId) {
+  if (id === parentId) return;
+  // Guard against moving a folder inside one of its own descendants.
+  let cursor = parentId;
+  while (cursor) {
+    if (cursor === id) return;
+    cursor =
+      db.prepare("SELECT parent_id FROM folders WHERE id = ?").get(cursor)
+        ?.parent_id ?? null;
+  }
+  db.prepare("UPDATE folders SET parent_id = ?, updated_at = ? WHERE id = ?").run(
+    parentId ?? null,
+    now(),
+    id,
+  );
+}
+
+function reorderFolders(orderedIds) {
+  const upd = db.prepare("UPDATE folders SET sort_order = ? WHERE id = ?");
+  const tx = db.transaction((ids) => ids.forEach((fid, i) => upd.run(i, fid)));
+  tx(orderedIds);
+}
+
 // ---------- Sequences ----------
 
 function seqTags(sequenceId) {
@@ -472,6 +554,7 @@ function getSequence(id) {
     level: s.level,
     created_at: s.created_at,
     updated_at: s.updated_at,
+    folder_id: s.folder_id ?? null,
     tags: seqTags(s.id),
     items: itemRows.map((it) => ({
       id: it.id,
@@ -536,6 +619,7 @@ function duplicateSequence(id) {
     title: src.title + " (copy)",
     description: src.description,
     level: src.level,
+    folder_id: src.folder_id ?? null,
   });
   if (src.tags.length) setSequenceTags(newId, src.tags.map((t) => t.id));
   const ins = db.prepare(
