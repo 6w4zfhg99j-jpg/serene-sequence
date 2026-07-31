@@ -20,5 +20,6 @@ export default defineConfig({
       : {}),
   },
   // Relative base so the Electron shell can load built assets via file://
+  ...(isElectron ? { nitro: { preset: "node-server" } } : {}),
   vite: { base: "./" },
 });
