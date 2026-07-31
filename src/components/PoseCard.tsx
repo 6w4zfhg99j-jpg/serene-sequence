@@ -10,7 +10,65 @@ interface Props {
   compact?: boolean;
 }
 
-export function PoseCard({ pose, onClick, onFavorite, onAdd, compact }: Props) {
+export function PoseCard({ pose, onClick, onFavorite, onAdd, compact, dense }: Props) {
+  // Dense mode: minimal browsing card — small thumbnail, name only, tight grid.
+  if (dense) {
+    return (
+      <div
+        className={
+          "group relative flex flex-col overflow-hidden rounded-lg border border-line bg-surface transition-all hover:border-ink-subtle hover:shadow-sm " +
+          (onClick ? "cursor-pointer" : "")
+        }
+        onClick={onClick}
+      >
+        <div className="relative aspect-square">
+          <PoseImage
+            path={pose.image_url}
+            alt={pose.name}
+            className="size-full object-cover"
+          />
+          {onFavorite && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onFavorite();
+              }}
+              className="absolute right-1 top-1 flex size-6 items-center justify-center rounded-full bg-background/85 backdrop-blur-sm transition-colors hover:bg-background"
+              aria-label="Favorite"
+            >
+              <Heart
+                className={
+                  "size-3 " +
+                  (pose.is_favorite ? "fill-accent text-accent" : "text-ink-muted")
+                }
+                strokeWidth={1.75}
+              />
+            </button>
+          )}
+          {onAdd && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onAdd();
+              }}
+              className="absolute bottom-1 right-1 flex size-7 items-center justify-center rounded-full bg-ink text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100"
+              aria-label="Add to sequence"
+            >
+              <Plus className="size-3.5" />
+            </button>
+          )}
+        </div>
+        <div className="px-2 py-1.5">
+          <h3 className="truncate text-xs font-medium leading-tight" title={pose.name}>
+            {pose.name}
+          </h3>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className={
