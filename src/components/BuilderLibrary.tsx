@@ -66,6 +66,7 @@ export function BuilderLibrary({ poses, categories, subcategories = [], onAdd }:
   }, [filtered, categories]);
 
   const t = useT();
+  const catLabel = useCategoryLabel();
 
   function toggle(id: string) {
     setCollapsed((c) => ({ ...c, [id]: !c[id] }));

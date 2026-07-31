@@ -37,6 +37,7 @@ function CategorySection({
   onFavorite: (p: Pose) => void;
 }) {
   const t = useT();
+  const catLabel = useCategoryLabel();
   // Notion-style subcategory chips, scoped to this category section.
   const [activeSub, setActiveSub] = useState<string | null>(null);
   const subs = useMemo(

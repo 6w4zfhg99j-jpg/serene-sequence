@@ -46,6 +46,7 @@ interface Props {
 
 export function PoseFormDialog({ open, onOpenChange, pose }: Props) {
   const t = useT();
+  const catLabel = useCategoryLabel();
   const qc = useQueryClient();
   const { data: categories = [] } = useQuery({ queryKey: ["categories"], queryFn: fetchCategories });
   const { data: subcategories = [] } = useQuery({

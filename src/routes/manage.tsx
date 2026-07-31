@@ -86,6 +86,7 @@ function ManagePage() {
 
 function CategoriesPanel() {
   const t = useT();
+  const catLabel = useCategoryLabel();
   const qc = useQueryClient();
   const { data: categories = [] } = useQuery({
     queryKey: ["categories"],

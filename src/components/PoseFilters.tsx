@@ -64,6 +64,7 @@ export function PoseFiltersPanel({
   compact,
 }: PanelProps) {
   const t = useT();
+  const catLabel = useCategoryLabel();
   return (
     <div className={compact ? "space-y-3" : "space-y-4"}>
       <div className="relative">
