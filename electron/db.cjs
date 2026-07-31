@@ -517,8 +517,16 @@ function reorderSequenceItems(sequenceId, orderedIds) {
 module.exports = {
   init,
   listCategories,
+  createCategory,
+  updateCategory,
+  deleteCategory,
+  reorderCategories,
   listTags,
   createTag,
+  updateTag,
+  mergeTags,
+  deleteTag,
+
   listPoses,
   upsertPose,
   toggleFavorite,
