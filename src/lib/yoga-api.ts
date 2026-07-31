@@ -632,6 +632,7 @@ export async function duplicateSequence(id: string): Promise<string> {
     title: src.title + " (copy)",
     description: src.description ?? undefined,
     level: src.level,
+    folder_id: src.folder_id ?? null,
   });
   if (src.tags.length) await setSequenceTags(newId, src.tags.map((t) => t.id));
   if (src.items.length) {
