@@ -290,40 +290,47 @@ export function PoseFormDialog({ open, onOpenChange, pose }: Props) {
           </div>
 
           {availableSubcategories.length > 0 && (
-            <div>
-              <Label className="mb-2 block">{t("pose.subcategory")}</Label>
-              <div className="flex flex-wrap gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setSubcategoryId(null)}
-                  className={
-                    "rounded-full border px-3 py-1 text-xs transition-colors " +
-                    (subcategoryId === null
-                      ? "border-ink bg-ink text-background"
-                      : "border-line text-ink-muted hover:border-ink-muted")
-                  }
-                >
-                  None
-                </button>
-                {availableSubcategories.map((s) => {
-                  const active = subcategoryId === s.id;
+            <div className="space-y-2">
+              <Label className="block">{t("pose.subcategory")}</Label>
+              {categories
+                .filter((c) => categoryIds.includes(c.id))
+                .map((c) => {
+                  const subs = availableSubcategories.filter(
+                    (s) => s.category_id === c.id,
+                  );
+                  if (subs.length === 0) return null;
                   return (
-                    <button
-                      key={s.id}
-                      type="button"
-                      onClick={() => setSubcategoryId(active ? null : s.id)}
-                      className={
-                        "rounded-full border px-3 py-1 text-xs transition-colors " +
-                        (active
-                          ? "border-ink bg-ink text-background"
-                          : "border-line text-ink-muted hover:border-ink-muted")
-                      }
-                    >
-                      {s.name}
-                    </button>
+                    <div key={c.id} className="flex flex-wrap items-center gap-1.5">
+                      <span className="mr-1 text-[11px] uppercase tracking-wide text-ink-subtle">
+                        {catLabel(c.name)}
+                      </span>
+                      {subs.map((s) => {
+                        const active = subcategoryIds.includes(s.id);
+                        return (
+                          <button
+                            key={s.id}
+                            type="button"
+                            onClick={() =>
+                              setSubcategoryIds((prev) =>
+                                active
+                                  ? prev.filter((id) => id !== s.id)
+                                  : [...prev, s.id],
+                              )
+                            }
+                            className={
+                              "rounded-full border px-3 py-1 text-xs transition-colors " +
+                              (active
+                                ? "border-ink bg-ink text-background"
+                                : "border-line text-ink-muted hover:border-ink-muted")
+                            }
+                          >
+                            {s.name}
+                          </button>
+                        );
+                      })}
+                    </div>
                   );
                 })}
-              </div>
             </div>
           )}
 
