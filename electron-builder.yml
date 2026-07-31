@@ -35,7 +35,6 @@ mac:
   extendInfo:
     CFBundleName: VONA
     CFBundleDisplayName: VONA
-    CFBundleExecutable: VONA
 
 dmg:
   title: VONA

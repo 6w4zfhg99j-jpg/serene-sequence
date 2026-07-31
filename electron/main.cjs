@@ -9,6 +9,9 @@ const images = require("./images.cjs");
 
 const isDev = !!process.env.ELECTRON_START_URL;
 
+// Menu bar / Dock title (matches productName in electron-builder.yml).
+app.setName("VONA");
+
 // The renderer is a static SPA built into dist/client. It references its assets
 // with absolute paths ("/assets/..."), which cannot resolve over file://.
 // We therefore serve it from a custom "app://" scheme with an SPA fallback.
