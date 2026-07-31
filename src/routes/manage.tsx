@@ -236,6 +236,7 @@ function CategoriesPanel() {
 /* ------------------------------------------------------------------ */
 
 function SubcategoriesEditor({ categoryId }: { categoryId: string }) {
+  const t = useT();
   const qc = useQueryClient();
   const { data: all = [] } = useQuery({
     queryKey: ["subcategories"],
@@ -437,16 +438,16 @@ function TagsPanel() {
       </p>
 
       <ul className="divide-y divide-line rounded-lg border border-line bg-surface/40">
-        {tags.map((t: Tag) => {
-          const uses = (t.pose_count ?? 0) + (t.sequence_count ?? 0);
+        {tags.map((tg: Tag) => {
+          const uses = (tg.pose_count ?? 0) + (tg.sequence_count ?? 0);
           return (
-            <li key={t.id} className="flex items-center gap-2 px-3 py-2">
-              {editingId === t.id ? (
+            <li key={tg.id} className="flex items-center gap-2 px-3 py-2">
+              {editingId === tg.id ? (
                 <RowEditor
                   value={draft}
                   onChange={setDraft}
                   onCancel={() => setEditingId(null)}
-                  onSave={() => rename.mutate({ id: t.id, name: draft })}
+                  onSave={() => rename.mutate({ id: tg.id, name: draft })}
                 />
               ) : (
                 <>
@@ -454,14 +455,14 @@ function TagsPanel() {
                     type="button"
                     className="flex-1 truncate text-left text-sm hover:text-ink-muted"
                     onClick={() => {
-                      setEditingId(t.id);
-                      setDraft(t.name);
+                      setEditingId(tg.id);
+                      setDraft(tg.name);
                     }}
                   >
-                    #{t.name}
+                    #{tg.name}
                   </button>
                   <span className="shrink-0 text-xs text-ink-muted">{uses}</span>
-                  {confirmId === t.id ? (
+                  {confirmId === tg.id ? (
                     <ConfirmDelete
                       hint={
                         uses > 0
@@ -469,10 +470,10 @@ function TagsPanel() {
                           : undefined
                       }
                       onCancel={() => setConfirmId(null)}
-                      onConfirm={() => remove.mutate(t.id)}
+                      onConfirm={() => remove.mutate(tg.id)}
                     />
                   ) : (
-                    <IconBtn label={t("common.delete")} onClick={() => setConfirmId(t.id)}>
+                    <IconBtn label={t("common.delete")} onClick={() => setConfirmId(tg.id)}>
                       <Trash2 className="size-3.5" />
                     </IconBtn>
                   )}
