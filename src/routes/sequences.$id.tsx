@@ -459,6 +459,7 @@ function SequenceRow({
   onDuplicate: () => void;
   onPatch: (p: Parameters<typeof updateSequenceItem>[1]) => void;
 }) {
+  const t = useT();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: item.id });
   const style = {
