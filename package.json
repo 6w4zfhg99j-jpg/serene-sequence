@@ -1,7 +1,7 @@
 {
   "name": "vona-yoga-studio",
   "version": "1.0.0",
-  "description": "VONA \u2014 a personal offline desktop app for creating yoga sequences",
+  "description": "VONA — a personal offline desktop app for creating yoga sequences",
   "author": "VONA Personal Yoga Studio",
   "private": true,
   "sideEffects": false,
