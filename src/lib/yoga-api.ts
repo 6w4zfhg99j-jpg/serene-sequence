@@ -87,19 +87,33 @@ export async function fetchCategories(): Promise<Category[]> {
   if (local) return local.categories.list();
   const { data, error } = await supabase
     .from("categories")
-    .select("*")
+    .select("*, pose_categories(count)")
     .order("sort_order");
   if (error) throw error;
-  return data as Category[];
+  return (data ?? []).map((c: any) => ({
+    id: c.id,
+    name: c.name,
+    sort_order: c.sort_order,
+    pose_count: c.pose_categories?.[0]?.count ?? 0,
+  }));
 }
 
 export async function fetchTags(): Promise<Tag[]> {
   const local = localBridge();
   if (local) return local.tags.list();
-  const { data, error } = await supabase.from("tags").select("*").order("name");
+  const { data, error } = await supabase
+    .from("tags")
+    .select("*, pose_tags(count), sequence_tags(count)")
+    .order("name");
   if (error) throw error;
-  return data as Tag[];
+  return (data ?? []).map((t: any) => ({
+    id: t.id,
+    name: t.name,
+    pose_count: t.pose_tags?.[0]?.count ?? 0,
+    sequence_count: t.sequence_tags?.[0]?.count ?? 0,
+  }));
 }
+
 
 export async function fetchPoses(): Promise<Pose[]> {
   const local = localBridge();
