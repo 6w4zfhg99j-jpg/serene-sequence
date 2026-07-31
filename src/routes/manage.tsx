@@ -34,6 +34,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LanguageSettings } from "@/components/LanguageSettings";
 import { useT } from "@/lib/i18n";
+import { useCategoryLabel } from "@/lib/i18n/categories";
 
 export const Route = createFileRoute("/manage")({
   head: () => ({
@@ -85,6 +86,7 @@ function ManagePage() {
 
 function CategoriesPanel() {
   const t = useT();
+  const catLabel = useCategoryLabel();
   const qc = useQueryClient();
   const { data: categories = [] } = useQuery({
     queryKey: ["categories"],
@@ -191,7 +193,7 @@ function CategoriesPanel() {
                       setDraft(c.name);
                     }}
                   >
-                    {c.name}
+                    {catLabel(c.name)}
                   </button>
                   <span className="shrink-0 text-xs text-ink-muted">
                     {c.pose_count ?? 0}

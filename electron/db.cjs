@@ -4,23 +4,28 @@ const { randomUUID } = require("crypto");
 
 let db;
 
+// Canonical (Italian) names — language-independent identity. The UI translates
+// them for display via src/lib/i18n/categories.ts.
 const DEFAULT_CATEGORIES = [
-  "Warm-up",
-  "Standing",
-  "Balance",
-  "Seated",
-  "Backbend",
-  "Forward Fold",
-  "Twist",
-  "Inversion",
-  "Arm Balance",
-  "Hip Opener",
-  "Core",
-  "Strength",
-  "Stretching",
-  "Restorative",
-  "Pranayama",
-  "Cool Down",
+  "INIZIO",
+  "RISCALDAMENTO",
+  "IN PIEDI",
+  "EQUILIBRIO BRACCIA",
+  "ALLUNGAMENTO",
+  "FORZA",
+  "TORSIONE",
+  "DA SDRAIATI",
+  "ESTENSIONE",
+  "DA SDRAIATI ADDOMINALI",
+  "CAPOVOLTE",
+];
+
+// The English defaults shipped before this list existed. They are cleared out
+// once, and only when no pose uses them, so nothing the user built is lost.
+const LEGACY_DEFAULT_CATEGORIES = [
+  "Warm-up", "Standing", "Balance", "Seated", "Backbend", "Forward Fold",
+  "Twist", "Inversion", "Arm Balance", "Hip Opener", "Core", "Strength",
+  "Stretching", "Restorative", "Pranayama", "Cool Down",
 ];
 
 function init(dbPath) {
@@ -120,12 +125,36 @@ function init(dbPath) {
   db.exec("CREATE INDEX IF NOT EXISTS idx_sequences_folder ON sequences(folder_id)");
   db.exec("CREATE INDEX IF NOT EXISTS idx_folders_parent ON folders(parent_id)");
 
+  db.exec("CREATE TABLE IF NOT EXISTS app_meta (key TEXT PRIMARY KEY, value TEXT)");
+  const metaGet = db.prepare("SELECT value FROM app_meta WHERE key = ?");
+  const metaSet = db.prepare("INSERT OR REPLACE INTO app_meta (key, value) VALUES (?, ?)");
+
   const catCount = db.prepare("SELECT COUNT(*) AS n FROM categories").get().n;
+  const insCat = db.prepare(
+    "INSERT INTO categories (id, name, sort_order) VALUES (?, ?, ?)",
+  );
+
   if (catCount === 0) {
-    const ins = db.prepare(
-      "INSERT INTO categories (id, name, sort_order) VALUES (?, ?, ?)",
-    );
-    DEFAULT_CATEGORIES.forEach((name, i) => ins.run(randomUUID(), name, i));
+    DEFAULT_CATEGORIES.forEach((name, i) => insCat.run(randomUUID(), name, i));
+    metaSet.run("default_categories", "v2");
+  } else if (!metaGet.get("default_categories")) {
+    // One-time upgrade of an existing local database.
+    const unusedLegacy = db.prepare(`
+      SELECT c.id FROM categories c
+      WHERE c.name = ?
+        AND NOT EXISTS (SELECT 1 FROM pose_categories pc WHERE pc.category_id = c.id)
+        AND NOT EXISTS (SELECT 1 FROM subcategories s WHERE s.category_id = c.id)
+    `);
+    const del = db.prepare("DELETE FROM categories WHERE id = ?");
+    LEGACY_DEFAULT_CATEGORIES.forEach((name) => {
+      const row = unusedLegacy.get(name);
+      if (row) del.run(row.id);
+    });
+    const exists = db.prepare("SELECT id FROM categories WHERE name = ?");
+    DEFAULT_CATEGORIES.forEach((name, i) => {
+      if (!exists.get(name)) insCat.run(randomUUID(), name, i);
+    });
+    metaSet.run("default_categories", "v2");
   }
 }
 

@@ -18,6 +18,7 @@ import { PoseCard } from "@/components/PoseCard";
 import { PoseFormDialog } from "@/components/PoseFormDialog";
 import { PoseFiltersPanel, usePoseFilters } from "@/components/PoseFilters";
 import { useT } from "@/lib/i18n";
+import { useCategoryLabel } from "@/lib/i18n/categories";
 
 interface Group {
   category: Category | null;
@@ -36,6 +37,7 @@ function CategorySection({
   onFavorite: (p: Pose) => void;
 }) {
   const t = useT();
+  const catLabel = useCategoryLabel();
   // Notion-style subcategory chips, scoped to this category section.
   const [activeSub, setActiveSub] = useState<string | null>(null);
   const subs = useMemo(
@@ -55,7 +57,7 @@ function CategorySection({
     <section className="space-y-3">
       <div className="flex items-baseline justify-between gap-4 border-b border-line pb-1.5">
         <h2 className="font-serif text-xl">
-          {group.category?.name ?? t("common.uncategorized")}
+          {group.category ? catLabel(group.category.name) : t("common.uncategorized")}
         </h2>
         <span className="text-xs text-ink-subtle">
           {visible.length} {visible.length === 1 ? t("common.pose") : t("common.poses")}

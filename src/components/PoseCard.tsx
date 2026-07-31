@@ -2,6 +2,7 @@ import { Heart, Plus } from "lucide-react";
 import type { Pose } from "@/lib/yoga-api";
 import { PoseImage } from "./PoseImage";
 import { useT } from "@/lib/i18n";
+import { useCategoryLabel } from "@/lib/i18n/categories";
 
 interface Props {
   pose: Pose;
@@ -14,6 +15,7 @@ interface Props {
 
 export function PoseCard({ pose, onClick, onFavorite, onAdd, compact, dense }: Props) {
   const t = useT();
+  const catLabel = useCategoryLabel();
   // Dense mode: minimal browsing card — small thumbnail, name only, tight grid.
   if (dense) {
     return (
@@ -133,7 +135,7 @@ export function PoseCard({ pose, onClick, onFavorite, onAdd, compact, dense }: P
                 key={c.id}
                 className="rounded bg-surface px-1.5 py-0.5 text-[10px] text-ink-muted ring-1 ring-line"
               >
-                {c.name}
+                {catLabel(c.name)}
               </span>
             ))}
             {pose.tags.slice(0, 3).map((t) => (
