@@ -112,6 +112,14 @@ function init(dbPath) {
     db.exec("ALTER TABLE poses ADD COLUMN subcategory_id TEXT REFERENCES subcategories(id) ON DELETE SET NULL");
   }
 
+  // Migration for databases created before folders existed.
+  const seqCols = db.prepare("PRAGMA table_info(sequences)").all().map((c) => c.name);
+  if (!seqCols.includes("folder_id")) {
+    db.exec("ALTER TABLE sequences ADD COLUMN folder_id TEXT REFERENCES folders(id) ON DELETE SET NULL");
+  }
+  db.exec("CREATE INDEX IF NOT EXISTS idx_sequences_folder ON sequences(folder_id)");
+  db.exec("CREATE INDEX IF NOT EXISTS idx_folders_parent ON folders(parent_id)");
+
   const catCount = db.prepare("SELECT COUNT(*) AS n FROM categories").get().n;
   if (catCount === 0) {
     const ins = db.prepare(
