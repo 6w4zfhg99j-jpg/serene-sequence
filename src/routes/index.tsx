@@ -1,15 +1,21 @@
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Calendar, Copy, FileDown, Plus, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { Calendar, Copy, FolderInput, GripVertical, Plus, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 
 import {
+  createFolder,
   createSequence,
+  deleteFolder,
   deleteSequence,
   duplicateSequence,
+  fetchFolders,
   fetchSequences,
   formatDuration,
+  moveSequenceToFolder,
+  renameFolder,
+  type Folder,
 } from "@/lib/yoga-api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +26,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  FolderTree,
+  folderPaths,
+  type FolderSelection,
+} from "@/components/FolderTree";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -27,14 +45,28 @@ export const Route = createFileRoute("/")({
       { title: "Sequences — Asana Personal Yoga Studio" },
       {
         name: "description",
-        content: "Your saved yoga sequences. Build, edit, duplicate, and export to PDF.",
+        content:
+          "Your saved yoga sequences, organized in folders you can create, rename, and rearrange anytime.",
       },
       { property: "og:title", content: "Sequences — Asana" },
-      { property: "og:description", content: "Your saved yoga sequences." },
+      {
+        property: "og:description",
+        content: "Your saved yoga sequences, organized in editable folders.",
+      },
     ],
   }),
   component: Home,
 });
+
+function descendantIds(folders: Folder[], rootId: string): string[] {
+  const ids = [rootId];
+  for (let i = 0; i < ids.length; i++) {
+    for (const f of folders) {
+      if (f.parent_id === ids[i]) ids.push(f.id);
+    }
+  }
+  return ids;
+}
 
 function Home() {
   const qc = useQueryClient();
@@ -43,14 +75,30 @@ function Home() {
     queryKey: ["sequences"],
     queryFn: fetchSequences,
   });
+  const { data: folders = [] } = useQuery({
+    queryKey: ["folders"],
+    queryFn: fetchFolders,
+  });
+
   const [search, setSearch] = useState("");
   const [newTitle, setNewTitle] = useState("");
+  const [newFolderId, setNewFolderId] = useState<string | null>(null);
   const [showNew, setShowNew] = useState(false);
+  const [selection, setSelection] = useState<FolderSelection>({ kind: "all" });
+
+  const refreshAll = () => {
+    qc.invalidateQueries({ queryKey: ["sequences"] });
+    qc.invalidateQueries({ queryKey: ["folders"] });
+  };
 
   const create = useMutation({
-    mutationFn: () => createSequence({ title: newTitle.trim() || "Untitled sequence" }),
+    mutationFn: () =>
+      createSequence({
+        title: newTitle.trim() || "Untitled sequence",
+        folder_id: newFolderId,
+      }),
     onSuccess: (id) => {
-      qc.invalidateQueries({ queryKey: ["sequences"] });
+      refreshAll();
       setShowNew(false);
       setNewTitle("");
       nav({ to: "/sequences/$id", params: { id } });
@@ -58,26 +106,75 @@ function Home() {
   });
   const dup = useMutation({
     mutationFn: (id: string) => duplicateSequence(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["sequences"] }),
+    onSuccess: refreshAll,
   });
   const del = useMutation({
     mutationFn: (id: string) => deleteSequence(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["sequences"] }),
+    onSuccess: refreshAll,
+  });
+  const move = useMutation({
+    mutationFn: (v: { id: string; folderId: string | null }) =>
+      moveSequenceToFolder(v.id, v.folderId),
+    onSuccess: refreshAll,
+  });
+  const addFolder = useMutation({
+    mutationFn: (v: { name: string; parentId: string | null }) =>
+      createFolder(v.name, v.parentId),
+    onSuccess: refreshAll,
+  });
+  const rename = useMutation({
+    mutationFn: (v: { id: string; name: string }) => renameFolder(v.id, v.name),
+    onSuccess: refreshAll,
+  });
+  const removeFolder = useMutation({
+    mutationFn: (id: string) => deleteFolder(id),
+    onSuccess: (_d, id) => {
+      refreshAll();
+      setSelection((s) => (s.kind === "folder" && s.id === id ? { kind: "all" } : s));
+    },
   });
 
-  const filtered = sequences.filter((s) =>
-    s.title.toLowerCase().includes(search.toLowerCase())
+  const counts = useMemo(() => {
+    const byFolder: Record<string, number> = {};
+    let unfiled = 0;
+    for (const s of sequences) {
+      if (s.folder_id) byFolder[s.folder_id] = (byFolder[s.folder_id] ?? 0) + 1;
+      else unfiled++;
+    }
+    return { all: sequences.length, unfiled, byFolder };
+  }, [sequences]);
+
+  const paths = useMemo(() => folderPaths(folders), [folders]);
+  const pathLabel = (id: string | null) =>
+    id ? (paths.find((p) => p.id === id)?.label ?? "Folder") : "Main area";
+
+  const scoped = useMemo(() => {
+    if (selection.kind === "all") return sequences;
+    if (selection.kind === "unfiled") return sequences.filter((s) => !s.folder_id);
+    const ids = new Set(descendantIds(folders, selection.id));
+    return sequences.filter((s) => s.folder_id && ids.has(s.folder_id));
+  }, [sequences, folders, selection]);
+
+  const filtered = scoped.filter((s) =>
+    s.title.toLowerCase().includes(search.toLowerCase()),
   );
 
+  const heading =
+    selection.kind === "all"
+      ? "Sequences"
+      : selection.kind === "unfiled"
+        ? "Main area"
+        : (folders.find((f) => f.id === selection.id)?.name ?? "Folder");
+
   return (
-    <div className="mx-auto max-w-6xl px-6 py-10">
-      <header className="mb-10 flex flex-wrap items-end justify-between gap-4">
+    <div className="mx-auto max-w-7xl px-6 py-10">
+      <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="label-eyebrow">Your Studio</p>
-          <h1 className="mt-1 font-serif text-5xl">Sequences</h1>
+          <h1 className="mt-1 font-serif text-5xl">{heading}</h1>
           <p className="mt-2 max-w-lg text-sm text-ink-muted">
-            Assemble poses from your library into a class. Save, duplicate,
-            print — no timer running, no eyes over your shoulder.
+            Organize classes into folders — drag a sequence onto a folder, or use
+            the move menu. Folders can be created, renamed, and deleted anytime.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -87,90 +184,163 @@ function Home() {
             placeholder="Search sequences..."
             className="w-56"
           />
-          <Button onClick={() => setShowNew(true)}>
+          <Button
+            onClick={() => {
+              setNewFolderId(selection.kind === "folder" ? selection.id : null);
+              setShowNew(true);
+            }}
+          >
             <Plus className="mr-1 size-4" />
             New sequence
           </Button>
         </div>
       </header>
 
-      {isLoading ? (
-        <p className="text-sm text-ink-muted">Loading...</p>
-      ) : filtered.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-line p-20 text-center">
-          <h2 className="font-serif text-3xl">
-            {sequences.length === 0 ? "Nothing built yet." : "Nothing matches."}
-          </h2>
-          <p className="mt-2 text-sm text-ink-muted">
-            {sequences.length === 0
-              ? "Start with your first sequence — or fill the library first."
-              : "Try a different search."}
-          </p>
-          {sequences.length === 0 && (
-            <div className="mt-6 flex justify-center gap-2">
-              <Button onClick={() => setShowNew(true)}>New sequence</Button>
-              <Button variant="outline" asChild>
-                <Link to="/library">Go to library</Link>
-              </Button>
+      <div className="grid gap-8 lg:grid-cols-[240px_1fr]">
+        <aside className="lg:sticky lg:top-24 lg:self-start">
+          <FolderTree
+            folders={folders}
+            counts={counts}
+            selection={selection}
+            onSelect={setSelection}
+            onCreate={(name, parentId) => addFolder.mutate({ name, parentId })}
+            onRename={(id, name) => rename.mutate({ id, name })}
+            onDelete={(id) => removeFolder.mutate(id)}
+            onDropSequence={(id, folderId) => move.mutate({ id, folderId })}
+          />
+        </aside>
+
+        <div>
+          {isLoading ? (
+            <p className="text-sm text-ink-muted">Loading...</p>
+          ) : filtered.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-line p-20 text-center">
+              <h2 className="font-serif text-3xl">
+                {sequences.length === 0
+                  ? "Nothing built yet."
+                  : scoped.length === 0
+                    ? "This folder is empty."
+                    : "Nothing matches."}
+              </h2>
+              <p className="mt-2 text-sm text-ink-muted">
+                {sequences.length === 0
+                  ? "Start with your first sequence — or fill the library first."
+                  : scoped.length === 0
+                    ? "Drag a sequence here, or create a new one inside this folder."
+                    : "Try a different search."}
+              </p>
+              <div className="mt-6 flex justify-center gap-2">
+                <Button
+                  onClick={() => {
+                    setNewFolderId(selection.kind === "folder" ? selection.id : null);
+                    setShowNew(true);
+                  }}
+                >
+                  New sequence
+                </Button>
+                {sequences.length === 0 && (
+                  <Button variant="outline" asChild>
+                    <Link to="/library">Go to library</Link>
+                  </Button>
+                )}
+              </div>
             </div>
+          ) : (
+            <ul className="divide-y divide-line rounded-2xl border border-line bg-surface">
+              {filtered.map((s) => (
+                <li
+                  key={s.id}
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData("text/sequence-id", s.id);
+                    e.dataTransfer.effectAllowed = "move";
+                  }}
+                  className="group flex items-center gap-3 px-4 py-4 hover:bg-background"
+                >
+                  <GripVertical
+                    className="size-4 shrink-0 cursor-grab text-ink-subtle opacity-0 transition-opacity group-hover:opacity-100"
+                    strokeWidth={1.5}
+                  />
+                  <Link
+                    to="/sequences/$id"
+                    params={{ id: s.id }}
+                    className="min-w-0 flex-1"
+                  >
+                    <div className="flex items-baseline gap-3">
+                      <h3 className="truncate font-serif text-xl">{s.title}</h3>
+                      <span className="label-eyebrow">{s.level.replace("-", " ")}</span>
+                    </div>
+                    {s.description && (
+                      <p className="mt-0.5 line-clamp-1 text-sm text-ink-muted">
+                        {s.description}
+                      </p>
+                    )}
+                    <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-subtle">
+                      <span className="inline-flex items-center gap-1">
+                        <Calendar className="size-3" strokeWidth={1.5} />
+                        {format(new Date(s.updated_at), "MMM d, yyyy")}
+                      </span>
+                      <span>{s.pose_count} poses</span>
+                      <span>{formatDuration(s.total_duration_seconds)}</span>
+                      {selection.kind !== "folder" && (
+                        <span className="text-ink-muted">{pathLabel(s.folder_id)}</span>
+                      )}
+                      {s.tags.slice(0, 4).map((t) => (
+                        <span key={t.id} className="text-accent">
+                          #{t.name}
+                        </span>
+                      ))}
+                    </div>
+                  </Link>
+                  <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="sm" variant="ghost" title="Move to folder">
+                          <FolderInput className="size-4" strokeWidth={1.5} />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="max-h-80 overflow-y-auto">
+                        <DropdownMenuItem
+                          onClick={() => move.mutate({ id: s.id, folderId: null })}
+                          disabled={!s.folder_id}
+                        >
+                          Main area
+                        </DropdownMenuItem>
+                        {paths.length > 0 && <DropdownMenuSeparator />}
+                        {paths.map((p) => (
+                          <DropdownMenuItem
+                            key={p.id}
+                            onClick={() => move.mutate({ id: s.id, folderId: p.id })}
+                            disabled={s.folder_id === p.id}
+                          >
+                            {p.label}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => dup.mutate(s.id)}
+                      title="Duplicate"
+                    >
+                      <Copy className="size-4" strokeWidth={1.5} />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => del.mutate(s.id)}
+                      title="Delete"
+                    >
+                      <Trash2 className="size-4" strokeWidth={1.5} />
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
           )}
         </div>
-      ) : (
-        <ul className="divide-y divide-line rounded-2xl border border-line bg-surface">
-          {filtered.map((s) => (
-            <li key={s.id} className="group flex items-center gap-4 px-5 py-4 hover:bg-background">
-              <Link
-                to="/sequences/$id"
-                params={{ id: s.id }}
-                className="min-w-0 flex-1"
-              >
-                <div className="flex items-baseline gap-3">
-                  <h3 className="truncate font-serif text-xl">{s.title}</h3>
-                  <span className="label-eyebrow">{s.level.replace("-", " ")}</span>
-                </div>
-                {s.description && (
-                  <p className="mt-0.5 line-clamp-1 text-sm text-ink-muted">
-                    {s.description}
-                  </p>
-                )}
-                <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-subtle">
-                  <span className="inline-flex items-center gap-1">
-                    <Calendar className="size-3" strokeWidth={1.5} />
-                    {format(new Date(s.updated_at), "MMM d, yyyy")}
-                  </span>
-                  <span>{s.pose_count} poses</span>
-                  <span>{formatDuration(s.total_duration_seconds)}</span>
-                  {s.tags.slice(0, 4).map((t) => (
-                    <span key={t.id} className="text-accent">
-                      #{t.name}
-                    </span>
-                  ))}
-                </div>
-              </Link>
-              <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => dup.mutate(s.id)}
-                  title="Duplicate"
-                >
-                  <Copy className="size-4" strokeWidth={1.5} />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => {
-                    if (confirm(`Delete "${s.title}"?`)) del.mutate(s.id);
-                  }}
-                  title="Delete"
-                >
-                  <Trash2 className="size-4" strokeWidth={1.5} />
-                </Button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
+      </div>
 
       <Dialog open={showNew} onOpenChange={setShowNew}>
         <DialogContent>
@@ -184,12 +354,27 @@ function Home() {
             placeholder="Morning solar flow"
             onKeyDown={(e) => e.key === "Enter" && create.mutate()}
           />
+          <label className="text-sm text-ink-muted">
+            Save into
+            <select
+              value={newFolderId ?? ""}
+              onChange={(e) => setNewFolderId(e.target.value || null)}
+              className="mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-sm text-ink"
+            >
+              <option value="">Main area</option>
+              {paths.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
+          </label>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowNew(false)}>
               Cancel
             </Button>
             <Button onClick={() => create.mutate()} disabled={create.isPending}>
-              Create & build
+              Create &amp; build
             </Button>
           </DialogFooter>
         </DialogContent>

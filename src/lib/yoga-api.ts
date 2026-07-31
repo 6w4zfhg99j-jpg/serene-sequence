@@ -23,6 +23,13 @@ export interface Tag {
   pose_count?: number;
   sequence_count?: number;
 }
+export interface Folder {
+  id: string;
+  name: string;
+  parent_id: string | null;
+  sort_order: number;
+  sequence_count?: number;
+}
 
 export interface Pose {
   id: string;
@@ -56,6 +63,7 @@ export interface Sequence {
   level: Level;
   created_at: string;
   updated_at: string;
+  folder_id: string | null;
   tags: Tag[];
   items: SequencePoseItem[];
 }
@@ -66,6 +74,7 @@ export interface SequenceListItem {
   level: Level;
   created_at: string;
   updated_at: string;
+  folder_id: string | null;
   pose_count: number;
   total_duration_seconds: number;
   tags: Tag[];
@@ -432,6 +441,79 @@ export async function getSignedImageUrls(paths: string[]): Promise<Record<string
 }
 
 // ------------------------------------------------------------------
+// Folders
+// ------------------------------------------------------------------
+
+export async function fetchFolders(): Promise<Folder[]> {
+  const local = localBridge();
+  if (local) return local.folders.list();
+  const { data, error } = await supabase
+    .from("folders")
+    .select("id, name, parent_id, sort_order, sequences(count)")
+    .order("sort_order");
+  if (error) throw error;
+  return (data ?? []).map((f: any) => ({
+    id: f.id,
+    name: f.name,
+    parent_id: f.parent_id,
+    sort_order: f.sort_order,
+    sequence_count: f.sequences?.[0]?.count ?? 0,
+  }));
+}
+
+export async function createFolder(
+  name: string,
+  parentId: string | null = null,
+): Promise<Folder> {
+  const clean = name.trim();
+  if (!clean) throw new Error("Empty folder name");
+  const local = localBridge();
+  if (local) return local.folders.create(clean, parentId);
+  const { data, error } = await supabase
+    .from("folders")
+    .insert({ name: clean, parent_id: parentId })
+    .select("id, name, parent_id, sort_order")
+    .single();
+  if (error) throw error;
+  return { ...(data as any), sequence_count: 0 };
+}
+
+export async function renameFolder(id: string, name: string) {
+  const clean = name.trim();
+  if (!clean) throw new Error("Empty folder name");
+  const local = localBridge();
+  if (local) return local.folders.update(id, clean);
+  const { error } = await supabase.from("folders").update({ name: clean }).eq("id", id);
+  if (error) throw error;
+}
+
+/** Deletes the folder and any nested folders; their sequences return to the main area. */
+export async function deleteFolder(id: string) {
+  const local = localBridge();
+  if (local) return local.folders.remove(id);
+  const { error } = await supabase.from("folders").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function moveFolder(id: string, parentId: string | null) {
+  const local = localBridge();
+  if (local) return local.folders.move(id, parentId);
+  const { error } = await supabase
+    .from("folders")
+    .update({ parent_id: parentId })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+/** Move a sequence into a folder, or back to the main area with null. */
+export async function moveSequenceToFolder(
+  sequenceId: string,
+  folderId: string | null,
+) {
+  return updateSequence(sequenceId, { folder_id: folderId });
+}
+
+// ------------------------------------------------------------------
 // Sequences
 // ------------------------------------------------------------------
 
@@ -441,7 +523,7 @@ export async function fetchSequences(): Promise<SequenceListItem[]> {
   const { data, error } = await supabase
     .from("sequences")
     .select(
-      `id, title, description, level, created_at, updated_at,
+      `id, title, description, level, created_at, updated_at, folder_id,
        tags:sequence_tags(tag:tags(id,name)),
        items:sequence_poses(duration_seconds, pose:poses(duration_seconds))`,
     )
@@ -454,6 +536,7 @@ export async function fetchSequences(): Promise<SequenceListItem[]> {
     level: r.level,
     created_at: r.created_at,
     updated_at: r.updated_at,
+    folder_id: r.folder_id ?? null,
     pose_count: r.items?.length ?? 0,
     total_duration_seconds: (r.items ?? []).reduce(
       (sum: number, it: any) =>
@@ -490,6 +573,7 @@ export async function createSequence(input: {
   title: string;
   description?: string;
   level?: Level;
+  folder_id?: string | null;
 }): Promise<string> {
   const local = localBridge();
   if (local) return local.sequences.create(input);
@@ -499,6 +583,7 @@ export async function createSequence(input: {
       title: input.title,
       description: input.description ?? null,
       level: input.level ?? "all-levels",
+      folder_id: input.folder_id ?? null,
     })
     .select("id")
     .single();
@@ -508,7 +593,12 @@ export async function createSequence(input: {
 
 export async function updateSequence(
   id: string,
-  patch: { title?: string; description?: string | null; level?: Level },
+  patch: {
+    title?: string;
+    description?: string | null;
+    level?: Level;
+    folder_id?: string | null;
+  },
 ) {
   const local = localBridge();
   if (local) return local.sequences.update(id, patch);
@@ -542,6 +632,7 @@ export async function duplicateSequence(id: string): Promise<string> {
     title: src.title + " (copy)",
     description: src.description ?? undefined,
     level: src.level,
+    folder_id: src.folder_id ?? null,
   });
   if (src.tags.length) await setSequenceTags(newId, src.tags.map((t) => t.id));
   if (src.items.length) {
