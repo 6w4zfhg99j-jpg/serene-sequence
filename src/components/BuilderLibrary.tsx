@@ -118,7 +118,7 @@ export function BuilderLibrary({ poses, categories, subcategories = [], onAdd }:
             .sort((a, b) => a.sort_order - b.sort_order);
           const sel = activeSub[id] ?? null;
           const visiblePoses = sel
-            ? g.poses.filter((p) => p.subcategory_id === sel)
+            ? g.poses.filter((p) => p.subcategory_ids.includes(sel))
             : g.poses;
           return (
             <div key={id} className="mb-1">

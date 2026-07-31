@@ -42,7 +42,11 @@ export interface Pose {
   is_favorite: boolean;
   created_at: string;
   updated_at: string;
+  /** Kept for backwards compatibility — mirrors the first entry of subcategory_ids. */
   subcategory_id: string | null;
+  /** A pose can belong to several subcategories, across one or more categories. */
+  subcategory_ids: string[];
+  sort_order: number;
   categories: Category[];
   tags: Tag[];
 }
@@ -82,14 +86,23 @@ export interface SequenceListItem {
 
 const POSE_SELECT = `
   id, name, sanskrit_name, description, duration_seconds, difficulty,
-  image_url, is_favorite, created_at, updated_at, subcategory_id,
+  image_url, is_favorite, created_at, updated_at, subcategory_id, sort_order,
   categories:pose_categories(category:categories(id,name,sort_order)),
+  subs:pose_subcategories(subcategory_id),
   tags:pose_tags(tag:tags(id,name))
 `;
 
 function normalizePose(raw: any): Pose {
+  const subcategory_ids: string[] = (raw.subs ?? [])
+    .map((r: any) => r.subcategory_id)
+    .filter(Boolean);
+  if (raw.subcategory_id && !subcategory_ids.includes(raw.subcategory_id)) {
+    subcategory_ids.unshift(raw.subcategory_id);
+  }
   return {
     ...raw,
+    sort_order: raw.sort_order ?? 0,
+    subcategory_ids,
     categories: (raw.categories ?? []).map((r: any) => r.category).filter(Boolean),
     tags: (raw.tags ?? []).map((r: any) => r.tag).filter(Boolean),
   } as Pose;
@@ -120,7 +133,7 @@ export async function fetchSubcategories(): Promise<Subcategory[]> {
   if (local) return local.subcategories.list();
   const { data, error } = await supabase
     .from("subcategories")
-    .select("id, category_id, name, sort_order, poses(count)")
+    .select("id, category_id, name, sort_order, pose_subcategories(count)")
     .order("sort_order");
   if (error) throw error;
   return (data ?? []).map((s: any) => ({
@@ -128,7 +141,7 @@ export async function fetchSubcategories(): Promise<Subcategory[]> {
     category_id: s.category_id,
     name: s.name,
     sort_order: s.sort_order,
-    pose_count: s.poses?.[0]?.count ?? 0,
+    pose_count: s.pose_subcategories?.[0]?.count ?? 0,
   }));
 }
 
@@ -155,6 +168,7 @@ export async function fetchPoses(): Promise<Pose[]> {
   const { data, error } = await supabase
     .from("poses")
     .select(POSE_SELECT)
+    .order("sort_order")
     .order("name");
   if (error) throw error;
   return (data ?? []).map(normalizePose);
@@ -169,21 +183,28 @@ export async function upsertPose(input: {
   difficulty: Difficulty;
   image_url?: string | null;
   is_favorite?: boolean;
-  subcategory_id?: string | null;
+  subcategoryIds: string[];
   categoryIds: string[];
   tagIds: string[];
 }) {
   const local = localBridge();
   if (local) return local.poses.upsert(input);
-  const { categoryIds, tagIds, id, ...fields } = input;
+  const { categoryIds, tagIds, subcategoryIds, id, ...rest } = input;
+  const fields = { ...rest, subcategory_id: subcategoryIds[0] ?? null };
   let poseId = id;
   if (poseId) {
     const { error } = await supabase.from("poses").update(fields).eq("id", poseId);
     if (error) throw error;
   } else {
+    const { data: maxRow } = await supabase
+      .from("poses")
+      .select("sort_order")
+      .order("sort_order", { ascending: false })
+      .limit(1)
+      .maybeSingle();
     const { data, error } = await supabase
       .from("poses")
-      .insert(fields)
+      .insert({ ...fields, sort_order: (maxRow?.sort_order ?? -1) + 1 })
       .select("id")
       .single();
     if (error) throw error;
@@ -191,10 +212,16 @@ export async function upsertPose(input: {
   }
   await supabase.from("pose_categories").delete().eq("pose_id", poseId);
   await supabase.from("pose_tags").delete().eq("pose_id", poseId);
+  await supabase.from("pose_subcategories").delete().eq("pose_id", poseId);
   if (categoryIds.length) {
     await supabase
       .from("pose_categories")
       .insert(categoryIds.map((cid) => ({ pose_id: poseId!, category_id: cid })));
+  }
+  if (subcategoryIds.length) {
+    await supabase
+      .from("pose_subcategories")
+      .insert(subcategoryIds.map((sid) => ({ pose_id: poseId!, subcategory_id: sid })));
   }
   if (tagIds.length) {
     await supabase
@@ -202,6 +229,17 @@ export async function upsertPose(input: {
       .insert(tagIds.map((tid) => ({ pose_id: poseId!, tag_id: tid })));
   }
   return poseId!;
+}
+
+/** Persists the manual library order. `orderedIds` is the full list, in order. */
+export async function reorderPoses(orderedIds: string[]) {
+  const local = localBridge();
+  if (local) return local.poses.reorder(orderedIds);
+  await Promise.all(
+    orderedIds.map((id, idx) =>
+      supabase.from("poses").update({ sort_order: idx }).eq("id", id),
+    ),
+  );
 }
 
 export async function toggleFavorite(pose: Pose) {

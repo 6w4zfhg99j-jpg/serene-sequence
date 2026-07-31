@@ -26,12 +26,13 @@ export interface LocalBridge {
       difficulty: Difficulty;
       image_url?: string | null;
       is_favorite?: boolean;
-      subcategory_id?: string | null;
+      subcategoryIds: string[];
       categoryIds: string[];
       tagIds: string[];
     }): Promise<string>;
     toggleFavorite(id: string, next: boolean): Promise<void>;
     remove(id: string): Promise<void>;
+    reorder(orderedIds: string[]): Promise<void>;
   };
   categories: {
     list(): Promise<Category[]>;

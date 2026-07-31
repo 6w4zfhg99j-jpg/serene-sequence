@@ -100,6 +100,36 @@ export type Database = {
           },
         ]
       }
+      pose_subcategories: {
+        Row: {
+          pose_id: string
+          subcategory_id: string
+        }
+        Insert: {
+          pose_id: string
+          subcategory_id: string
+        }
+        Update: {
+          pose_id?: string
+          subcategory_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pose_subcategories_pose_id_fkey"
+            columns: ["pose_id"]
+            isOneToOne: false
+            referencedRelation: "poses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pose_subcategories_subcategory_id_fkey"
+            columns: ["subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "subcategories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pose_tags: {
         Row: {
           pose_id: string
@@ -141,6 +171,7 @@ export type Database = {
           is_favorite: boolean
           name: string
           sanskrit_name: string | null
+          sort_order: number
           subcategory_id: string | null
           updated_at: string
         }
@@ -154,6 +185,7 @@ export type Database = {
           is_favorite?: boolean
           name: string
           sanskrit_name?: string | null
+          sort_order?: number
           subcategory_id?: string | null
           updated_at?: string
         }
@@ -167,6 +199,7 @@ export type Database = {
           is_favorite?: boolean
           name?: string
           sanskrit_name?: string | null
+          sort_order?: number
           subcategory_id?: string | null
           updated_at?: string
         }

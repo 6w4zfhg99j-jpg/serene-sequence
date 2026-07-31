@@ -70,6 +70,11 @@ function init(dbPath) {
       category_id TEXT NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
       PRIMARY KEY (pose_id, category_id)
     );
+    CREATE TABLE IF NOT EXISTS pose_subcategories (
+      pose_id TEXT NOT NULL REFERENCES poses(id) ON DELETE CASCADE,
+      subcategory_id TEXT NOT NULL REFERENCES subcategories(id) ON DELETE CASCADE,
+      PRIMARY KEY (pose_id, subcategory_id)
+    );
     CREATE TABLE IF NOT EXISTS pose_tags (
       pose_id TEXT NOT NULL REFERENCES poses(id) ON DELETE CASCADE,
       tag_id TEXT NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
@@ -116,6 +121,20 @@ function init(dbPath) {
   if (!poseCols.includes("subcategory_id")) {
     db.exec("ALTER TABLE poses ADD COLUMN subcategory_id TEXT REFERENCES subcategories(id) ON DELETE SET NULL");
   }
+  // Manual library ordering.
+  if (!poseCols.includes("sort_order")) {
+    db.exec("ALTER TABLE poses ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0");
+    const ids = db.prepare("SELECT id FROM poses ORDER BY name").all();
+    const upd = db.prepare("UPDATE poses SET sort_order = ? WHERE id = ?");
+    db.transaction(() => ids.forEach((r, i) => upd.run(i, r.id)))();
+  }
+  // Carry single-subcategory assignments into the multi-subcategory link table.
+  db.exec(`
+    INSERT OR IGNORE INTO pose_subcategories (pose_id, subcategory_id)
+    SELECT id, subcategory_id FROM poses WHERE subcategory_id IS NOT NULL
+  `);
+  db.exec("CREATE INDEX IF NOT EXISTS idx_pose_subcats ON pose_subcategories(subcategory_id)");
+
 
   // Migration for databases created before folders existed.
   const seqCols = db.prepare("PRAGMA table_info(sequences)").all().map((c) => c.name);
@@ -173,6 +192,8 @@ function poseRow(row) {
     image_url: row.image_url,
     is_favorite: unbool(row.is_favorite),
     subcategory_id: row.subcategory_id ?? null,
+    subcategory_ids: [],
+    sort_order: row.sort_order ?? 0,
     created_at: row.created_at,
     updated_at: row.updated_at,
     categories: [],
@@ -205,6 +226,15 @@ function hydratePoseCategoriesTags(poses) {
       name: r.name,
       sort_order: r.sort_order,
     });
+  }
+  const subs = db
+    .prepare(
+      `SELECT pose_id, subcategory_id FROM pose_subcategories
+       WHERE pose_id IN (${placeholders})`,
+    )
+    .all(...ids);
+  for (const r of subs) {
+    byId.get(r.pose_id).subcategory_ids.push(r.subcategory_id);
   }
   for (const r of tags) {
     byId.get(r.pose_id).tags.push({ id: r.id, name: r.name });
@@ -256,7 +286,7 @@ function listSubcategories() {
   return db
     .prepare(
       `SELECT s.id, s.category_id, s.name, s.sort_order,
-        (SELECT COUNT(*) FROM poses p WHERE p.subcategory_id = s.id) AS pose_count
+        (SELECT COUNT(*) FROM pose_subcategories ps WHERE ps.subcategory_id = s.id) AS pose_count
        FROM subcategories s ORDER BY s.sort_order, s.name`,
     )
     .all();
@@ -367,12 +397,17 @@ function deleteTag(id) {
 // ---------- Poses ----------
 
 function listPoses() {
-  const rows = db.prepare("SELECT * FROM poses ORDER BY name").all().map(poseRow);
+  const rows = db
+    .prepare("SELECT * FROM poses ORDER BY sort_order, name")
+    .all()
+    .map(poseRow);
   return hydratePoseCategoriesTags(rows);
 }
 
 function upsertPose(input) {
   const id = input.id ?? randomUUID();
+  const subIds = input.subcategoryIds ?? (input.subcategory_id ? [input.subcategory_id] : []);
+  const primarySub = subIds[0] ?? null;
   const existing = input.id
     ? db.prepare("SELECT id FROM poses WHERE id = ?").get(id)
     : null;
@@ -390,15 +425,17 @@ function upsertPose(input) {
       input.difficulty,
       input.image_url ?? null,
       bool(input.is_favorite),
-      input.subcategory_id ?? null,
+      primarySub,
       now(),
       id,
     );
   } else {
+    const nextOrder =
+      (db.prepare("SELECT MAX(sort_order) AS m FROM poses").get()?.m ?? -1) + 1;
     db.prepare(
       `INSERT INTO poses (id, name, sanskrit_name, description, duration_seconds,
-        difficulty, image_url, is_favorite, subcategory_id, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        difficulty, image_url, is_favorite, subcategory_id, sort_order, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).run(
       id,
       input.name,
@@ -408,20 +445,34 @@ function upsertPose(input) {
       input.difficulty,
       input.image_url ?? null,
       bool(input.is_favorite),
-      input.subcategory_id ?? null,
+      primarySub,
+      nextOrder,
       now(),
       now(),
     );
   }
   db.prepare("DELETE FROM pose_categories WHERE pose_id = ?").run(id);
   db.prepare("DELETE FROM pose_tags WHERE pose_id = ?").run(id);
+  db.prepare("DELETE FROM pose_subcategories WHERE pose_id = ?").run(id);
   const insCat = db.prepare(
     "INSERT INTO pose_categories (pose_id, category_id) VALUES (?, ?)",
   );
   for (const cid of input.categoryIds ?? []) insCat.run(id, cid);
+  const insSub = db.prepare(
+    "INSERT OR IGNORE INTO pose_subcategories (pose_id, subcategory_id) VALUES (?, ?)",
+  );
+  for (const sid of subIds) insSub.run(id, sid);
   const insTag = db.prepare("INSERT INTO pose_tags (pose_id, tag_id) VALUES (?, ?)");
   for (const tid of input.tagIds ?? []) insTag.run(id, tid);
   return id;
+}
+
+/** Persists manual library ordering: `orderedIds` is the full pose list, in order. */
+function reorderPoses(orderedIds) {
+  const upd = db.prepare("UPDATE poses SET sort_order = ? WHERE id = ?");
+  db.transaction(() => {
+    (orderedIds ?? []).forEach((id, i) => upd.run(i, id));
+  })();
 }
 
 function toggleFavorite(id, next) {
@@ -741,6 +792,7 @@ module.exports = {
 
   listPoses,
   upsertPose,
+  reorderPoses,
   toggleFavorite,
   removePose,
   listFolders,

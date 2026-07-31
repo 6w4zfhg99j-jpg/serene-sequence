@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld("yoga", {
     upsert: (input) => invoke("poses.upsert", input),
     toggleFavorite: (id, next) => invoke("poses.toggleFavorite", id, next),
     remove: (id) => invoke("poses.remove", id),
+    reorder: (orderedIds) => invoke("poses.reorder", orderedIds),
   },
   categories: {
     list: () => invoke("categories.list"),
