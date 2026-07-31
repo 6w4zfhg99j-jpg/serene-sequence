@@ -3,6 +3,7 @@ import type { Category, Pose, Tag } from "@/lib/yoga-api";
 import { Input } from "@/components/ui/input";
 import { Heart, Search } from "lucide-react";
 import { useT } from "@/lib/i18n";
+import { useCategoryLabel } from "@/lib/i18n/categories";
 
 interface FiltersState {
   search: string;
@@ -125,7 +126,7 @@ export function PoseFiltersPanel({
                   : "border-line text-ink-muted hover:border-ink-muted")
               }
             >
-              {c.name}
+              {catLabel(c.name)}
             </button>
           ))}
         </div>

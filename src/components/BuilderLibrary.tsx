@@ -4,6 +4,7 @@ import type { Category, Pose, Subcategory } from "@/lib/yoga-api";
 import { PoseImage } from "./PoseImage";
 import { Input } from "@/components/ui/input";
 import { useT } from "@/lib/i18n";
+import { useCategoryLabel } from "@/lib/i18n/categories";
 
 const LS_KEY = "builder.categoryCollapse.v1";
 const OTHER = "__other__";
@@ -110,7 +111,7 @@ export function BuilderLibrary({ poses, categories, subcategories = [], onAdd }:
         {grouped.map((g) => {
           const id = g.cat?.id ?? OTHER;
           const isCollapsed = !!collapsed[id];
-          const label = g.cat?.name ?? t("common.other");
+          const label = g.cat ? catLabel(g.cat.name) : t("common.other");
           const subs = subcategories
             .filter((s) => s.category_id === id)
             .sort((a, b) => a.sort_order - b.sort_order);

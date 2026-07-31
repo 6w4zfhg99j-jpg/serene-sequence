@@ -34,6 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useT } from "@/lib/i18n";
+import { useCategoryLabel } from "@/lib/i18n/categories";
 
 const DIFFICULTIES: Difficulty[] = ["beginner", "intermediate", "advanced"];
 
@@ -279,7 +280,7 @@ export function PoseFormDialog({ open, onOpenChange, pose }: Props) {
                         : "border-line text-ink-muted hover:border-ink-muted")
                     }
                   >
-                    {c.name}
+                    {catLabel(c.name)}
                   </button>
                 );
               })}
