@@ -86,14 +86,23 @@ export interface SequenceListItem {
 
 const POSE_SELECT = `
   id, name, sanskrit_name, description, duration_seconds, difficulty,
-  image_url, is_favorite, created_at, updated_at, subcategory_id,
+  image_url, is_favorite, created_at, updated_at, subcategory_id, sort_order,
   categories:pose_categories(category:categories(id,name,sort_order)),
+  subs:pose_subcategories(subcategory_id),
   tags:pose_tags(tag:tags(id,name))
 `;
 
 function normalizePose(raw: any): Pose {
+  const subcategory_ids: string[] = (raw.subs ?? [])
+    .map((r: any) => r.subcategory_id)
+    .filter(Boolean);
+  if (raw.subcategory_id && !subcategory_ids.includes(raw.subcategory_id)) {
+    subcategory_ids.unshift(raw.subcategory_id);
+  }
   return {
     ...raw,
+    sort_order: raw.sort_order ?? 0,
+    subcategory_ids,
     categories: (raw.categories ?? []).map((r: any) => r.category).filter(Boolean),
     tags: (raw.tags ?? []).map((r: any) => r.tag).filter(Boolean),
   } as Pose;
