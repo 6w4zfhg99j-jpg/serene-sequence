@@ -68,7 +68,7 @@ import {
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { exportSequencePdf } from "@/lib/pdf-export";
+import { exportSequencePdf, type PdfLayout } from "@/lib/pdf-export";
 
 const LEVELS: Level[] = ["all-levels", "beginner", "intermediate", "advanced"];
 
