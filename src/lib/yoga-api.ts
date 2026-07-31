@@ -63,6 +63,7 @@ export interface Sequence {
   level: Level;
   created_at: string;
   updated_at: string;
+  folder_id: string | null;
   tags: Tag[];
   items: SequencePoseItem[];
 }
@@ -73,6 +74,7 @@ export interface SequenceListItem {
   level: Level;
   created_at: string;
   updated_at: string;
+  folder_id: string | null;
   pose_count: number;
   total_duration_seconds: number;
   tags: Tag[];
