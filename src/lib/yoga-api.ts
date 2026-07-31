@@ -168,6 +168,7 @@ export async function fetchPoses(): Promise<Pose[]> {
   const { data, error } = await supabase
     .from("poses")
     .select(POSE_SELECT)
+    .order("sort_order")
     .order("name");
   if (error) throw error;
   return (data ?? []).map(normalizePose);
@@ -182,21 +183,28 @@ export async function upsertPose(input: {
   difficulty: Difficulty;
   image_url?: string | null;
   is_favorite?: boolean;
-  subcategory_id?: string | null;
+  subcategoryIds: string[];
   categoryIds: string[];
   tagIds: string[];
 }) {
   const local = localBridge();
   if (local) return local.poses.upsert(input);
-  const { categoryIds, tagIds, id, ...fields } = input;
+  const { categoryIds, tagIds, subcategoryIds, id, ...rest } = input;
+  const fields = { ...rest, subcategory_id: subcategoryIds[0] ?? null };
   let poseId = id;
   if (poseId) {
     const { error } = await supabase.from("poses").update(fields).eq("id", poseId);
     if (error) throw error;
   } else {
+    const { data: maxRow } = await supabase
+      .from("poses")
+      .select("sort_order")
+      .order("sort_order", { ascending: false })
+      .limit(1)
+      .maybeSingle();
     const { data, error } = await supabase
       .from("poses")
-      .insert(fields)
+      .insert({ ...fields, sort_order: (maxRow?.sort_order ?? -1) + 1 })
       .select("id")
       .single();
     if (error) throw error;
@@ -204,10 +212,16 @@ export async function upsertPose(input: {
   }
   await supabase.from("pose_categories").delete().eq("pose_id", poseId);
   await supabase.from("pose_tags").delete().eq("pose_id", poseId);
+  await supabase.from("pose_subcategories").delete().eq("pose_id", poseId);
   if (categoryIds.length) {
     await supabase
       .from("pose_categories")
       .insert(categoryIds.map((cid) => ({ pose_id: poseId!, category_id: cid })));
+  }
+  if (subcategoryIds.length) {
+    await supabase
+      .from("pose_subcategories")
+      .insert(subcategoryIds.map((sid) => ({ pose_id: poseId!, subcategory_id: sid })));
   }
   if (tagIds.length) {
     await supabase
@@ -215,6 +229,17 @@ export async function upsertPose(input: {
       .insert(tagIds.map((tid) => ({ pose_id: poseId!, tag_id: tid })));
   }
   return poseId!;
+}
+
+/** Persists the manual library order. `orderedIds` is the full list, in order. */
+export async function reorderPoses(orderedIds: string[]) {
+  const local = localBridge();
+  if (local) return local.poses.reorder(orderedIds);
+  await Promise.all(
+    orderedIds.map((id, idx) =>
+      supabase.from("poses").update({ sort_order: idx }).eq("id", id),
+    ),
+  );
 }
 
 export async function toggleFavorite(pose: Pose) {
