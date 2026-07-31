@@ -32,9 +32,14 @@ mac:
   identity: null
   gatekeeperAssess: false
   icon: build/icon.png
+  extendInfo:
+    CFBundleName: VONA
+    CFBundleDisplayName: VONA
+    CFBundleExecutable: VONA
 
 dmg:
   title: VONA
+  artifactName: VONA-${version}-${arch}.dmg
   icon: build/icon.png
   window:
     width: 540
