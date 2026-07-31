@@ -435,6 +435,7 @@ function listSequences() {
       level: s.level,
       created_at: s.created_at,
       updated_at: s.updated_at,
+      folder_id: s.folder_id ?? null,
       pose_count: its.length,
       total_duration_seconds: its.reduce(
         (acc, i) => acc + (i.override ?? i.pose_dur ?? 0),
@@ -488,16 +489,24 @@ function getSequence(id) {
 function createSequence(input) {
   const id = randomUUID();
   db.prepare(
-    `INSERT INTO sequences (id, title, description, level, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-  ).run(id, input.title, input.description ?? null, input.level ?? "all-levels", now(), now());
+    `INSERT INTO sequences (id, title, description, level, folder_id, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+  ).run(
+    id,
+    input.title,
+    input.description ?? null,
+    input.level ?? "all-levels",
+    input.folder_id ?? null,
+    now(),
+    now(),
+  );
   return id;
 }
 
 function updateSequence(id, patch) {
   const fields = [];
   const values = [];
-  for (const k of ["title", "description", "level"]) {
+  for (const k of ["title", "description", "level", "folder_id"]) {
     if (k in patch) {
       fields.push(`${k} = ?`);
       values.push(patch[k]);
