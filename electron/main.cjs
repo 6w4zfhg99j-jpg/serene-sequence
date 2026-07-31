@@ -117,6 +117,15 @@ app.whenReady().then(() => {
   handle("categories.remove", (_e, id) => db.deleteCategory(id));
   handle("categories.reorder", (_e, ids) => db.reorderCategories(ids));
 
+  handle("subcategories.list", () => db.listSubcategories());
+  handle("subcategories.create", (_e, categoryId, name) =>
+    db.createSubcategory(categoryId, name),
+  );
+  handle("subcategories.update", (_e, id, name) => db.updateSubcategory(id, name));
+  handle("subcategories.remove", (_e, id) => db.deleteSubcategory(id));
+  handle("subcategories.reorder", (_e, ids) => db.reorderSubcategories(ids));
+
+
   handle("tags.list", () => db.listTags());
   handle("tags.create", (_e, name) => db.createTag(name));
   handle("tags.update", (_e, id, name) => db.updateTag(id, name));

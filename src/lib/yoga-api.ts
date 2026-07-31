@@ -10,6 +10,13 @@ export interface Category {
   sort_order: number;
   pose_count?: number;
 }
+export interface Subcategory {
+  id: string;
+  category_id: string;
+  name: string;
+  sort_order: number;
+  pose_count?: number;
+}
 export interface Tag {
   id: string;
   name: string;
@@ -28,6 +35,7 @@ export interface Pose {
   is_favorite: boolean;
   created_at: string;
   updated_at: string;
+  subcategory_id: string | null;
   categories: Category[];
   tags: Tag[];
 }
@@ -65,7 +73,7 @@ export interface SequenceListItem {
 
 const POSE_SELECT = `
   id, name, sanskrit_name, description, duration_seconds, difficulty,
-  image_url, is_favorite, created_at, updated_at,
+  image_url, is_favorite, created_at, updated_at, subcategory_id,
   categories:pose_categories(category:categories(id,name,sort_order)),
   tags:pose_tags(tag:tags(id,name))
 `;
@@ -95,6 +103,23 @@ export async function fetchCategories(): Promise<Category[]> {
     name: c.name,
     sort_order: c.sort_order,
     pose_count: c.pose_categories?.[0]?.count ?? 0,
+  }));
+}
+
+export async function fetchSubcategories(): Promise<Subcategory[]> {
+  const local = localBridge();
+  if (local) return local.subcategories.list();
+  const { data, error } = await supabase
+    .from("subcategories")
+    .select("id, category_id, name, sort_order, poses(count)")
+    .order("sort_order");
+  if (error) throw error;
+  return (data ?? []).map((s: any) => ({
+    id: s.id,
+    category_id: s.category_id,
+    name: s.name,
+    sort_order: s.sort_order,
+    pose_count: s.poses?.[0]?.count ?? 0,
   }));
 }
 
@@ -135,6 +160,7 @@ export async function upsertPose(input: {
   difficulty: Difficulty;
   image_url?: string | null;
   is_favorite?: boolean;
+  subcategory_id?: string | null;
   categoryIds: string[];
   tagIds: string[];
 }) {
@@ -245,6 +271,60 @@ export async function reorderCategories(orderedIds: string[]) {
     ),
   );
 }
+
+// ---- Subcategory management --------------------------------------
+
+export async function createSubcategory(
+  categoryId: string,
+  name: string,
+): Promise<Subcategory> {
+  const clean = name.trim();
+  if (!clean) throw new Error("Empty subcategory name");
+  const local = localBridge();
+  if (local) return local.subcategories.create(categoryId, clean);
+  const existing = await fetchSubcategories();
+  const siblings = existing.filter((s) => s.category_id === categoryId);
+  const dupe = siblings.find((s) => s.name.toLowerCase() === clean.toLowerCase());
+  if (dupe) return dupe;
+  const sort_order = siblings.reduce((m, s) => Math.max(m, s.sort_order), -1) + 1;
+  const { data, error } = await supabase
+    .from("subcategories")
+    .insert({ category_id: categoryId, name: clean, sort_order })
+    .select("id, category_id, name, sort_order")
+    .single();
+  if (error) throw error;
+  return data as Subcategory;
+}
+
+export async function updateSubcategory(id: string, name: string) {
+  const clean = name.trim();
+  if (!clean) throw new Error("Empty subcategory name");
+  const local = localBridge();
+  if (local) return local.subcategories.update(id, clean);
+  const { error } = await supabase
+    .from("subcategories")
+    .update({ name: clean })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function deleteSubcategory(id: string) {
+  const local = localBridge();
+  if (local) return local.subcategories.remove(id);
+  const { error } = await supabase.from("subcategories").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function reorderSubcategories(orderedIds: string[]) {
+  const local = localBridge();
+  if (local) return local.subcategories.reorder(orderedIds);
+  await Promise.all(
+    orderedIds.map((id, idx) =>
+      supabase.from("subcategories").update({ sort_order: idx }).eq("id", id),
+    ),
+  );
+}
+
 
 // ---- Tag management ----------------------------------------------
 

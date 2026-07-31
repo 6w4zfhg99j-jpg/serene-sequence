@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
@@ -7,6 +7,7 @@ import {
   createTag,
   deletePose,
   fetchCategories,
+  fetchSubcategories,
   fetchTags,
   uploadPoseImage,
   upsertPose,
@@ -44,6 +45,10 @@ interface Props {
 export function PoseFormDialog({ open, onOpenChange, pose }: Props) {
   const qc = useQueryClient();
   const { data: categories = [] } = useQuery({ queryKey: ["categories"], queryFn: fetchCategories });
+  const { data: subcategories = [] } = useQuery({
+    queryKey: ["subcategories"],
+    queryFn: fetchSubcategories,
+  });
   const { data: tags = [] } = useQuery({ queryKey: ["tags"], queryFn: fetchTags });
 
   const [name, setName] = useState("");
@@ -53,6 +58,7 @@ export function PoseFormDialog({ open, onOpenChange, pose }: Props) {
   const [difficulty, setDifficulty] = useState<Difficulty>("beginner");
   const [imagePath, setImagePath] = useState<string | null>(null);
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
+  const [subcategoryId, setSubcategoryId] = useState<string | null>(null);
   const [tagIds, setTagIds] = useState<string[]>([]);
   const [newTag, setNewTag] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -67,12 +73,25 @@ export function PoseFormDialog({ open, onOpenChange, pose }: Props) {
     setDifficulty((pose?.difficulty as Difficulty) ?? "beginner");
     setImagePath(pose?.image_url ?? null);
     setCategoryIds(pose?.categories.map((c) => c.id) ?? []);
+    setSubcategoryId(pose?.subcategory_id ?? null);
     setTagIds(pose?.tags.map((t) => t.id) ?? []);
     setNewTag("");
   }, [open, pose]);
 
   const { data: imgs } = useSignedImages([imagePath]);
   const imageUrl = resolveImage(imagePath, imgs);
+
+  // Subcategories are scoped to the categories the pose belongs to.
+  const availableSubcategories = useMemo(
+    () => subcategories.filter((s) => categoryIds.includes(s.category_id)),
+    [subcategories, categoryIds],
+  );
+
+  useEffect(() => {
+    if (subcategoryId && !availableSubcategories.some((s) => s.id === subcategoryId)) {
+      setSubcategoryId(null);
+    }
+  }, [availableSubcategories, subcategoryId]);
 
   const save = useMutation({
     mutationFn: async () => {
@@ -86,6 +105,7 @@ export function PoseFormDialog({ open, onOpenChange, pose }: Props) {
         difficulty,
         image_url: imagePath,
         is_favorite: pose?.is_favorite ?? false,
+        subcategory_id: subcategoryId,
         categoryIds,
         tagIds,
       });
@@ -263,6 +283,44 @@ export function PoseFormDialog({ open, onOpenChange, pose }: Props) {
               })}
             </div>
           </div>
+
+          {availableSubcategories.length > 0 && (
+            <div>
+              <Label className="mb-2 block">Subcategory</Label>
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setSubcategoryId(null)}
+                  className={
+                    "rounded-full border px-3 py-1 text-xs transition-colors " +
+                    (subcategoryId === null
+                      ? "border-ink bg-ink text-background"
+                      : "border-line text-ink-muted hover:border-ink-muted")
+                  }
+                >
+                  None
+                </button>
+                {availableSubcategories.map((s) => {
+                  const active = subcategoryId === s.id;
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => setSubcategoryId(active ? null : s.id)}
+                      className={
+                        "rounded-full border px-3 py-1 text-xs transition-colors " +
+                        (active
+                          ? "border-ink bg-ink text-background"
+                          : "border-line text-ink-muted hover:border-ink-muted")
+                      }
+                    >
+                      {s.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           <div>
             <Label className="mb-2 block">Tags</Label>

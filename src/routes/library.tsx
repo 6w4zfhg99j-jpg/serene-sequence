@@ -6,10 +6,12 @@ import { Plus } from "lucide-react";
 import {
   fetchCategories,
   fetchPoses,
+  fetchSubcategories,
   fetchTags,
   toggleFavorite,
   type Category,
   type Pose,
+  type Subcategory,
 } from "@/lib/yoga-api";
 import { Button } from "@/components/ui/button";
 import { PoseCard } from "@/components/PoseCard";
@@ -21,15 +23,105 @@ interface Group {
   poses: Pose[];
 }
 
+function CategorySection({
+  group,
+  subcategories,
+  onEdit,
+  onFavorite,
+}: {
+  group: Group;
+  subcategories: Subcategory[];
+  onEdit: (p: Pose) => void;
+  onFavorite: (p: Pose) => void;
+}) {
+  // Notion-style subcategory chips, scoped to this category section.
+  const [activeSub, setActiveSub] = useState<string | null>(null);
+  const subs = useMemo(
+    () =>
+      subcategories
+        .filter((s) => s.category_id === group.category?.id)
+        .sort((a, b) => a.sort_order - b.sort_order),
+    [subcategories, group.category?.id],
+  );
+  const visible = useMemo(
+    () =>
+      activeSub ? group.poses.filter((p) => p.subcategory_id === activeSub) : group.poses,
+    [group.poses, activeSub],
+  );
+
+  return (
+    <section className="space-y-3">
+      <div className="flex items-baseline justify-between gap-4 border-b border-line pb-1.5">
+        <h2 className="font-serif text-xl">
+          {group.category?.name ?? "Uncategorized"}
+        </h2>
+        <span className="text-xs text-ink-subtle">
+          {visible.length} {visible.length === 1 ? "pose" : "poses"}
+        </span>
+      </div>
+
+      {subs.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          <button
+            type="button"
+            onClick={() => setActiveSub(null)}
+            className={
+              "rounded-full border px-2.5 py-0.5 text-xs transition-colors " +
+              (activeSub === null
+                ? "border-ink bg-ink text-background"
+                : "border-line text-ink-muted hover:border-ink-muted")
+            }
+          >
+            All
+          </button>
+          {subs.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => setActiveSub(activeSub === s.id ? null : s.id)}
+              className={
+                "rounded-full border px-2.5 py-0.5 text-xs transition-colors " +
+                (activeSub === s.id
+                  ? "border-ink bg-ink text-background"
+                  : "border-line text-ink-muted hover:border-ink-muted")
+              }
+            >
+              {s.name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {visible.length === 0 ? (
+        <p className="py-4 text-xs text-ink-subtle">No poses in this subcategory.</p>
+      ) : (
+        <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+          {visible.map((p) => (
+            <PoseCard
+              key={p.id}
+              pose={p}
+              dense
+              onClick={() => onEdit(p)}
+              onFavorite={() => onFavorite(p)}
+            />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 function CategoryGroupedGrid({
   poses,
   categories,
+  subcategories,
   filters,
   onEdit,
   onFavorite,
 }: {
   poses: Pose[];
   categories: Category[];
+  subcategories: Subcategory[];
   filters: { categoryId: string | null };
   onEdit: (p: Pose) => void;
   onFavorite: (p: Pose) => void;
@@ -69,30 +161,17 @@ function CategoryGroupedGrid({
   return (
     <div className="space-y-10">
       {groups.map((g, i) => (
-        <section key={g.category?.id ?? "uncategorized"} className="space-y-3">
-          <div className="flex items-baseline justify-between gap-4 border-b border-line pb-1.5">
-            <h2 className="font-serif text-xl">
-              {g.category?.name ?? "Uncategorized"}
-            </h2>
-            <span className="text-xs text-ink-subtle">
-              {g.poses.length} {g.poses.length === 1 ? "pose" : "poses"}
-            </span>
-          </div>
-          <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-            {g.poses.map((p) => (
-              <PoseCard
-                key={p.id}
-                pose={p}
-                dense
-                onClick={() => onEdit(p)}
-                onFavorite={() => onFavorite(p)}
-              />
-            ))}
-          </div>
+        <div key={g.category?.id ?? "uncategorized"}>
+          <CategorySection
+            group={g}
+            subcategories={subcategories}
+            onEdit={onEdit}
+            onFavorite={onFavorite}
+          />
           {i < groups.length - 1 && (
-            <div className="pt-1 text-center text-ink-subtle">─────</div>
+            <div className="pt-4 text-center text-ink-subtle">─────</div>
           )}
-        </section>
+        </div>
       ))}
     </div>
   );
@@ -114,6 +193,10 @@ function LibraryPage() {
   const qc = useQueryClient();
   const { data: poses = [], isLoading } = useQuery({ queryKey: ["poses"], queryFn: fetchPoses });
   const { data: categories = [] } = useQuery({ queryKey: ["categories"], queryFn: fetchCategories });
+  const { data: subcategories = [] } = useQuery({
+    queryKey: ["subcategories"],
+    queryFn: fetchSubcategories,
+  });
   const { data: tags = [] } = useQuery({ queryKey: ["tags"], queryFn: fetchTags });
   const [editing, setEditing] = useState<Pose | null>(null);
   const [creating, setCreating] = useState(false);
@@ -173,6 +256,7 @@ function LibraryPage() {
             <CategoryGroupedGrid
               poses={filtered}
               categories={categories}
+              subcategories={subcategories}
               filters={filters}
               onEdit={(p) => setEditing(p)}
               onFavorite={(p) => fav.mutate(p)}
