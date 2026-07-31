@@ -62,7 +62,7 @@ export function PoseFormDialog({ open, onOpenChange, pose }: Props) {
   const [difficulty, setDifficulty] = useState<Difficulty>("beginner");
   const [imagePath, setImagePath] = useState<string | null>(null);
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
-  const [subcategoryId, setSubcategoryId] = useState<string | null>(null);
+  const [subcategoryIds, setSubcategoryIds] = useState<string[]>([]);
   const [tagIds, setTagIds] = useState<string[]>([]);
   const [newTag, setNewTag] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -77,7 +77,7 @@ export function PoseFormDialog({ open, onOpenChange, pose }: Props) {
     setDifficulty((pose?.difficulty as Difficulty) ?? "beginner");
     setImagePath(pose?.image_url ?? null);
     setCategoryIds(pose?.categories.map((c) => c.id) ?? []);
-    setSubcategoryId(pose?.subcategory_id ?? null);
+    setSubcategoryIds(pose?.subcategory_ids ?? []);
     setTagIds(pose?.tags.map((t) => t.id) ?? []);
     setNewTag("");
   }, [open, pose]);
@@ -92,10 +92,11 @@ export function PoseFormDialog({ open, onOpenChange, pose }: Props) {
   );
 
   useEffect(() => {
-    if (subcategoryId && !availableSubcategories.some((s) => s.id === subcategoryId)) {
-      setSubcategoryId(null);
-    }
-  }, [availableSubcategories, subcategoryId]);
+    setSubcategoryIds((prev) => {
+      const next = prev.filter((id) => availableSubcategories.some((s) => s.id === id));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [availableSubcategories]);
 
   const save = useMutation({
     mutationFn: async () => {
