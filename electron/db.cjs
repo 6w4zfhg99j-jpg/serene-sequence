@@ -227,6 +227,15 @@ function hydratePoseCategoriesTags(poses) {
       sort_order: r.sort_order,
     });
   }
+  const subs = db
+    .prepare(
+      `SELECT pose_id, subcategory_id FROM pose_subcategories
+       WHERE pose_id IN (${placeholders})`,
+    )
+    .all(...ids);
+  for (const r of subs) {
+    byId.get(r.pose_id).subcategory_ids.push(r.subcategory_id);
+  }
   for (const r of tags) {
     byId.get(r.pose_id).tags.push({ id: r.id, name: r.name });
   }
