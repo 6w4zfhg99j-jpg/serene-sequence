@@ -84,6 +84,7 @@ function ManagePage() {
 /* ------------------------------------------------------------------ */
 
 function CategoriesPanel() {
+  const t = useT();
   const qc = useQueryClient();
   const { data: categories = [] } = useQuery({
     queryKey: ["categories"],
@@ -137,7 +138,7 @@ function CategoriesPanel() {
 
   return (
     <section>
-      <PanelHeader title="Categories" count={categories.length} />
+      <PanelHeader title={t("manage.categories")} count={categories.length} />
 
       <form
         className="mb-4 flex gap-2"
@@ -149,7 +150,7 @@ function CategoriesPanel() {
         <Input
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
-          placeholder="New category"
+          placeholder={t("manage.newCategory")}
         />
         <Button type="submit" disabled={!newName.trim()}>
           <Plus className="size-4" />
@@ -170,7 +171,7 @@ function CategoriesPanel() {
               ) : (
                 <>
                   <IconBtn
-                    label="Subcategories"
+                    label={t("manage.subcategories")}
                     onClick={() =>
                       setExpandedId((cur) => (cur === c.id ? null : c.id))
                     }
@@ -195,11 +196,11 @@ function CategoriesPanel() {
                   <span className="shrink-0 text-xs text-ink-muted">
                     {c.pose_count ?? 0}
                   </span>
-                  <IconBtn label="Move up" onClick={() => move(i, -1)} disabled={i === 0}>
+                  <IconBtn label={t("common.moveUp")} onClick={() => move(i, -1)} disabled={i === 0}>
                     <ArrowUp className="size-3.5" />
                   </IconBtn>
                   <IconBtn
-                    label="Move down"
+                    label={t("common.moveDown")}
                     onClick={() => move(i, 1)}
                     disabled={i === categories.length - 1}
                   >
@@ -216,7 +217,7 @@ function CategoriesPanel() {
                       onConfirm={() => remove.mutate(c.id)}
                     />
                   ) : (
-                    <IconBtn label="Delete" onClick={() => setConfirmId(c.id)}>
+                    <IconBtn label={t("common.delete")} onClick={() => setConfirmId(c.id)}>
                       <Trash2 className="size-3.5" />
                     </IconBtn>
                   )}
@@ -226,7 +227,7 @@ function CategoriesPanel() {
             {expandedId === c.id && <SubcategoriesEditor categoryId={c.id} />}
           </li>
         ))}
-        {categories.length === 0 && <EmptyRow text="No categories yet." />}
+        {categories.length === 0 && <EmptyRow text={t("manage.noCategories")} />}
       </ul>
     </section>
   );
@@ -317,11 +318,11 @@ function SubcategoriesEditor({ categoryId }: { categoryId: string }) {
                 <span className="shrink-0 text-[11px] text-ink-muted">
                   {s.pose_count ?? 0}
                 </span>
-                <IconBtn label="Move up" onClick={() => move(i, -1)} disabled={i === 0}>
+                <IconBtn label={t("common.moveUp")} onClick={() => move(i, -1)} disabled={i === 0}>
                   <ArrowUp className="size-3" />
                 </IconBtn>
                 <IconBtn
-                  label="Move down"
+                  label={t("common.moveDown")}
                   onClick={() => move(i, 1)}
                   disabled={i === subs.length - 1}
                 >
@@ -338,7 +339,7 @@ function SubcategoriesEditor({ categoryId }: { categoryId: string }) {
                     onConfirm={() => remove.mutate(s.id)}
                   />
                 ) : (
-                  <IconBtn label="Delete" onClick={() => setConfirmId(s.id)}>
+                  <IconBtn label={t("common.delete")} onClick={() => setConfirmId(s.id)}>
                     <Trash2 className="size-3" />
                   </IconBtn>
                 )}
@@ -360,7 +361,7 @@ function SubcategoriesEditor({ categoryId }: { categoryId: string }) {
         <Input
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
-          placeholder="New subcategory"
+          placeholder={t("manage.newSubcategory")}
           className="h-7 text-xs"
         />
         <Button type="submit" size="sm" variant="outline" disabled={!newName.trim()}>
@@ -374,6 +375,7 @@ function SubcategoriesEditor({ categoryId }: { categoryId: string }) {
 /* ------------------------------------------------------------------ */
 
 function TagsPanel() {
+  const t = useT();
   const qc = useQueryClient();
   const { data: tags = [] } = useQuery({ queryKey: ["tags"], queryFn: fetchTags });
   const [newName, setNewName] = useState("");
@@ -411,7 +413,7 @@ function TagsPanel() {
 
   return (
     <section>
-      <PanelHeader title="Hashtags" count={tags.length} />
+      <PanelHeader title={t("manage.hashtags")} count={tags.length} />
 
       <form
         className="mb-4 flex gap-2"
@@ -423,7 +425,7 @@ function TagsPanel() {
         <Input
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
-          placeholder="New hashtag"
+          placeholder={t("manage.newHashtag")}
         />
         <Button type="submit" disabled={!newName.trim()}>
           <Plus className="size-4" />
@@ -470,7 +472,7 @@ function TagsPanel() {
                       onConfirm={() => remove.mutate(t.id)}
                     />
                   ) : (
-                    <IconBtn label="Delete" onClick={() => setConfirmId(t.id)}>
+                    <IconBtn label={t("common.delete")} onClick={() => setConfirmId(t.id)}>
                       <Trash2 className="size-3.5" />
                     </IconBtn>
                   )}
@@ -479,7 +481,7 @@ function TagsPanel() {
             </li>
           );
         })}
-        {tags.length === 0 && <EmptyRow text="No hashtags yet." />}
+        {tags.length === 0 && <EmptyRow text={t("manage.noHashtags")} />}
       </ul>
     </section>
   );
@@ -536,6 +538,7 @@ function RowEditor({
   onSave: () => void;
   onCancel: () => void;
 }) {
+  const t = useT();
   return (
     <div className="flex flex-1 items-center gap-2">
       <Input
@@ -548,10 +551,10 @@ function RowEditor({
         }}
         className="h-8"
       />
-      <IconBtn label="Save" onClick={onSave}>
+      <IconBtn label={t("common.save")} onClick={onSave}>
         <Check className="size-3.5" />
       </IconBtn>
-      <IconBtn label="Cancel" onClick={onCancel}>
+      <IconBtn label={t("common.cancel")} onClick={onCancel}>
         <X className="size-3.5" />
       </IconBtn>
     </div>
@@ -567,6 +570,7 @@ function ConfirmDelete({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const t = useT();
   return (
     <span className="flex items-center gap-2">
       {hint && <span className="text-xs text-ink-muted">{hint}</span>}
@@ -575,9 +579,9 @@ function ConfirmDelete({
         onClick={onConfirm}
         className="rounded-md bg-ink px-2 py-1 text-xs text-background"
       >
-        Delete
+        {t("common.delete")}
       </button>
-      <IconBtn label="Cancel" onClick={onCancel}>
+      <IconBtn label={t("common.cancel")} onClick={onCancel}>
         <X className="size-3.5" />
       </IconBtn>
     </span>
