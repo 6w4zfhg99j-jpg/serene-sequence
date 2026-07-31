@@ -32,6 +32,15 @@ contextBridge.exposeInMainWorld("yoga", {
     remove: (id) => invoke("tags.remove", id),
   },
 
+  folders: {
+    list: () => invoke("folders.list"),
+    create: (name, parentId) => invoke("folders.create", name, parentId),
+    update: (id, name) => invoke("folders.update", id, name),
+    remove: (id) => invoke("folders.remove", id),
+    move: (id, parentId) => invoke("folders.move", id, parentId),
+    reorder: (ids) => invoke("folders.reorder", ids),
+  },
+
   sequences: {
     list: () => invoke("sequences.list"),
     get: (id) => invoke("sequences.get", id),

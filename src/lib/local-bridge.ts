@@ -3,6 +3,7 @@
 
 import type {
   Category,
+  Folder,
   Pose,
   Sequence,
   SequenceListItem,
@@ -54,6 +55,15 @@ export interface LocalBridge {
     remove(id: string): Promise<void>;
   };
 
+  folders: {
+    list(): Promise<Folder[]>;
+    create(name: string, parentId: string | null): Promise<Folder>;
+    update(id: string, name: string): Promise<void>;
+    remove(id: string): Promise<void>;
+    move(id: string, parentId: string | null): Promise<void>;
+    reorder(ids: string[]): Promise<void>;
+  };
+
   sequences: {
     list(): Promise<SequenceListItem[]>;
     get(id: string): Promise<Sequence>;
@@ -61,10 +71,16 @@ export interface LocalBridge {
       title: string;
       description?: string;
       level?: Level;
+      folder_id?: string | null;
     }): Promise<string>;
     update(
       id: string,
-      patch: { title?: string; description?: string | null; level?: Level },
+      patch: {
+        title?: string;
+        description?: string | null;
+        level?: Level;
+        folder_id?: string | null;
+      },
     ): Promise<void>;
     setTags(id: string, tagIds: string[]): Promise<void>;
     remove(id: string): Promise<void>;

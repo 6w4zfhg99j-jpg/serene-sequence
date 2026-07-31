@@ -132,6 +132,13 @@ app.whenReady().then(() => {
   handle("tags.merge", (_e, sourceId, targetId) => db.mergeTags(sourceId, targetId));
   handle("tags.remove", (_e, id) => db.deleteTag(id));
 
+  handle("folders.list", () => db.listFolders());
+  handle("folders.create", (_e, name, parentId) => db.createFolder(name, parentId));
+  handle("folders.update", (_e, id, name) => db.updateFolder(id, name));
+  handle("folders.remove", (_e, id) => db.deleteFolder(id));
+  handle("folders.move", (_e, id, parentId) => db.moveFolder(id, parentId));
+  handle("folders.reorder", (_e, ids) => db.reorderFolders(ids));
+
   handle("sequences.list", () => db.listSequences());
   handle("sequences.get", (_e, id) => db.getSequence(id));
   handle("sequences.create", (_e, input) => db.createSequence(input));
