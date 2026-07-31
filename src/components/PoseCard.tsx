@@ -13,6 +13,7 @@ interface Props {
 }
 
 export function PoseCard({ pose, onClick, onFavorite, onAdd, compact, dense }: Props) {
+  const t = useT();
   // Dense mode: minimal browsing card — small thumbnail, name only, tight grid.
   if (dense) {
     return (
