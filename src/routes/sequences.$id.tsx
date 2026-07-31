@@ -153,7 +153,9 @@ function SequenceEditor() {
 
   const [showExport, setShowExport] = useState(false);
   const [includeNotes, setIncludeNotes] = useState(true);
+  const [layout, setLayout] = useState<PdfLayout>("grid");
   const [exporting, setExporting] = useState(false);
+
 
   if (isLoading || !seq) {
     return (
