@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { PoseCard } from "@/components/PoseCard";
 import { PoseFormDialog } from "@/components/PoseFormDialog";
 import { PoseFiltersPanel, usePoseFilters } from "@/components/PoseFilters";
+import { useT } from "@/lib/i18n";
 
 interface Group {
   category: Category | null;
@@ -34,6 +35,7 @@ function CategorySection({
   onEdit: (p: Pose) => void;
   onFavorite: (p: Pose) => void;
 }) {
+  const t = useT();
   // Notion-style subcategory chips, scoped to this category section.
   const [activeSub, setActiveSub] = useState<string | null>(null);
   const subs = useMemo(
@@ -53,10 +55,10 @@ function CategorySection({
     <section className="space-y-3">
       <div className="flex items-baseline justify-between gap-4 border-b border-line pb-1.5">
         <h2 className="font-serif text-xl">
-          {group.category?.name ?? "Uncategorized"}
+          {group.category?.name ?? t("common.uncategorized")}
         </h2>
         <span className="text-xs text-ink-subtle">
-          {visible.length} {visible.length === 1 ? "pose" : "poses"}
+          {visible.length} {visible.length === 1 ? t("common.pose") : t("common.poses")}
         </span>
       </div>
 
@@ -72,7 +74,7 @@ function CategorySection({
                 : "border-line text-ink-muted hover:border-ink-muted")
             }
           >
-            All
+            {t("common.all")}
           </button>
           {subs.map((s) => (
             <button
@@ -93,7 +95,7 @@ function CategorySection({
       )}
 
       {visible.length === 0 ? (
-        <p className="py-4 text-xs text-ink-subtle">No poses in this subcategory.</p>
+        <p className="py-4 text-xs text-ink-subtle">{t("common.noSubcategoryPoses")}</p>
       ) : (
         <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
           {visible.map((p) => (
@@ -190,6 +192,7 @@ export const Route = createFileRoute("/library")({
 });
 
 function LibraryPage() {
+  const t = useT();
   const qc = useQueryClient();
   const { data: poses = [], isLoading } = useQuery({ queryKey: ["poses"], queryFn: fetchPoses });
   const { data: categories = [] } = useQuery({ queryKey: ["categories"], queryFn: fetchCategories });
@@ -211,14 +214,14 @@ function LibraryPage() {
     <div className="mx-auto max-w-7xl px-6 py-10">
       <header className="mb-8 flex items-end justify-between gap-4">
         <div>
-          <p className="label-eyebrow">Library</p>
+          <p className="label-eyebrow">{t("library.eyebrow")}</p>
           <h1 className="mt-1 font-serif text-4xl">
-            {poses.length} {poses.length === 1 ? "pose" : "poses"}
+            {poses.length} {poses.length === 1 ? t("common.pose") : t("common.poses")}
           </h1>
         </div>
         <Button onClick={() => setCreating(true)}>
           <Plus className="mr-1 size-4" />
-          New pose
+          {t("library.newPose")}
         </Button>
       </header>
 
@@ -234,21 +237,19 @@ function LibraryPage() {
 
         <div>
           {isLoading ? (
-            <p className="text-sm text-ink-muted">Loading...</p>
+            <p className="text-sm text-ink-muted">{t("common.loading")}</p>
           ) : filtered.length === 0 ? (
             <div className="rounded-xl border border-dashed border-line p-16 text-center">
               <p className="font-serif text-2xl">
-                {poses.length === 0 ? "No poses yet" : "No poses match"}
+                {poses.length === 0 ? t("library.emptyTitle") : t("library.noMatchTitle")}
               </p>
               <p className="mt-2 text-sm text-ink-muted">
-                {poses.length === 0
-                  ? "Add your first pose to start building sequences."
-                  : "Try clearing a filter."}
+                {poses.length === 0 ? t("library.emptyHint") : t("library.noMatchHint")}
               </p>
               {poses.length === 0 && (
                 <Button className="mt-4" onClick={() => setCreating(true)}>
                   <Plus className="mr-1 size-4" />
-                  Add pose
+                  {t("library.addPose")}
                 </Button>
               )}
             </div>

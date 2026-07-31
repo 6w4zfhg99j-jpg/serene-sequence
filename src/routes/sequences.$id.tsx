@@ -70,6 +70,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { exportSequencePdf, type PdfLayout } from "@/lib/pdf-export";
+import { useT } from "@/lib/i18n";
 
 const LEVELS: Level[] = ["all-levels", "beginner", "intermediate", "advanced"];
 
@@ -86,6 +87,7 @@ export const Route = createFileRoute("/sequences/$id")({
 });
 
 function SequenceEditor() {
+  const t = useT();
   const { id } = Route.useParams();
   const qc = useQueryClient();
   const nav = useNavigate();
@@ -194,7 +196,7 @@ function SequenceEditor() {
       await exportSequencePdf(seq, { includeNotes, layout });
       setShowExport(false);
     } catch (e: any) {
-      toast.error(e.message ?? "Export failed");
+      toast.error(e.message ?? t("sequence.exportFailed"));
     } finally {
       setExporting(false);
     }
@@ -222,7 +224,7 @@ function SequenceEditor() {
               qc.setQueryData(["sequence", id], { ...seq, description: e.target.value })
             }
             onBlur={(e) => patch.mutate({ description: e.target.value || null })}
-            placeholder="Describe the intention of this sequence..."
+            placeholder={t("sequence.descriptionPlaceholder")}
             rows={2}
             className="mt-1 border-none bg-transparent px-0 text-sm text-ink-muted shadow-none focus-visible:ring-0"
           />
@@ -235,7 +237,7 @@ function SequenceEditor() {
             variant="ghost"
             className="text-destructive hover:text-destructive"
             onClick={() => {
-              if (confirm("Delete this sequence?")) del.mutate();
+              if (confirm(t("home.deleteSequenceConfirm"))) del.mutate();
             }}
           >
             <Trash2 className="size-4" />
@@ -378,8 +380,8 @@ function SequenceEditor() {
             <div className="grid grid-cols-2 gap-2">
               {(
                 [
-                  ["grid", "Compact grid", "Thumbnails + names, fills the page"],
-                  ["list", "Detailed list", "One pose per row with cues"],
+                  ["grid", t("sequence.layoutGrid"), t("sequence.layoutGridHint")],
+                  ["list", t("sequence.layoutList"), t("sequence.layoutListHint")],
                 ] as const
               ).map(([val, title, sub]) => (
                 <button
@@ -403,7 +405,7 @@ function SequenceEditor() {
                   checked={includeNotes}
                   onCheckedChange={(v) => setIncludeNotes(!!v)}
                 />
-                <span>Include per-pose notes</span>
+                <span>{t("sequence.includeNotes")}</span>
               </label>
             )}
             <p className="text-xs text-ink-muted">
@@ -457,6 +459,7 @@ function SequenceRow({
   onDuplicate: () => void;
   onPatch: (p: Parameters<typeof updateSequenceItem>[1]) => void;
 }) {
+  const t = useT();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: item.id });
   const style = {
@@ -487,7 +490,7 @@ function SequenceRow({
           className="cursor-grab touch-none text-ink-subtle hover:text-ink"
           {...attributes}
           {...listeners}
-          aria-label="Drag"
+          aria-label={t("common.drag")}
         >
           <GripVertical className="size-4" />
         </button>
@@ -514,10 +517,10 @@ function SequenceRow({
           {formatDuration(item.duration_seconds ?? item.pose.duration_seconds)}
         </button>
         <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-          <Button variant="ghost" size="sm" onClick={onDuplicate} title="Duplicate">
+          <Button variant="ghost" size="sm" onClick={onDuplicate} title={t("common.duplicate")}>
             <Copy className="size-3.5" strokeWidth={1.5} />
           </Button>
-          <Button variant="ghost" size="sm" onClick={onRemove} title="Remove">
+          <Button variant="ghost" size="sm" onClick={onRemove} title={t("common.remove")}>
             <Trash2 className="size-3.5" strokeWidth={1.5} />
           </Button>
         </div>
@@ -538,7 +541,7 @@ function SequenceRow({
               />
             </div>
             <div>
-              <Label className="text-xs">Side</Label>
+              <Label className="text-xs">{t("sequence.side")}</Label>
               <Select
                 value={item.side ?? "none"}
                 onValueChange={(v) => onPatch({ side: v === "none" ? null : v })}
@@ -547,9 +550,9 @@ function SequenceRow({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Both / N/A</SelectItem>
-                  <SelectItem value="Right">Right</SelectItem>
-                  <SelectItem value="Left">Left</SelectItem>
+                  <SelectItem value="none">{t("sequence.sideBoth")}</SelectItem>
+                  <SelectItem value="Right">{t("sequence.sideRight")}</SelectItem>
+                  <SelectItem value="Left">{t("sequence.sideLeft")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -561,7 +564,7 @@ function SequenceRow({
               onChange={(e) => setLocalNotes(e.target.value)}
               onBlur={() => onPatch({ notes: localNotes || null })}
               rows={2}
-              placeholder="Cue the breath, alignment, a variation..."
+              placeholder={t("sequence.notesPlaceholder")}
             />
           </div>
         </div>

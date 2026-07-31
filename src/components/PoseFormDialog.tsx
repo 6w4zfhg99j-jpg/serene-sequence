@@ -33,6 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useT } from "@/lib/i18n";
 
 const DIFFICULTIES: Difficulty[] = ["beginner", "intermediate", "advanced"];
 
@@ -43,6 +44,7 @@ interface Props {
 }
 
 export function PoseFormDialog({ open, onOpenChange, pose }: Props) {
+  const t = useT();
   const qc = useQueryClient();
   const { data: categories = [] } = useQuery({ queryKey: ["categories"], queryFn: fetchCategories });
   const { data: subcategories = [] } = useQuery({
@@ -95,7 +97,7 @@ export function PoseFormDialog({ open, onOpenChange, pose }: Props) {
 
   const save = useMutation({
     mutationFn: async () => {
-      if (!name.trim()) throw new Error("Name is required");
+      if (!name.trim()) throw new Error(t("pose.nameRequired"));
       await upsertPose({
         id: pose?.id,
         name: name.trim(),
@@ -113,7 +115,7 @@ export function PoseFormDialog({ open, onOpenChange, pose }: Props) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["poses"] });
       qc.invalidateQueries({ queryKey: ["tags"] });
-      toast.success(pose ? "Pose updated" : "Pose added");
+      toast.success(pose ? t("pose.updated") : t("pose.added"));
       onOpenChange(false);
     },
     onError: (e: Error) => toast.error(e.message),
@@ -123,7 +125,7 @@ export function PoseFormDialog({ open, onOpenChange, pose }: Props) {
     mutationFn: () => deletePose(pose!.id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["poses"] });
-      toast.success("Pose deleted");
+      toast.success(t("pose.deleted"));
       onOpenChange(false);
     },
   });
@@ -144,7 +146,7 @@ export function PoseFormDialog({ open, onOpenChange, pose }: Props) {
       const path = await uploadPoseImage(file);
       setImagePath(path);
     } catch (e: any) {
-      toast.error(e.message ?? "Upload failed");
+      toast.error(e.message ?? t("pose.uploadFailed"));
     } finally {
       setUploading(false);
     }
@@ -155,7 +157,7 @@ export function PoseFormDialog({ open, onOpenChange, pose }: Props) {
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="font-serif text-2xl">
-            {pose ? "Edit pose" : "New pose"}
+            {pose ? t("pose.edit") : t("pose.new")}
           </DialogTitle>
         </DialogHeader>
 
@@ -205,11 +207,11 @@ export function PoseFormDialog({ open, onOpenChange, pose }: Props) {
           {/* Fields */}
           <div className="space-y-3">
             <div>
-              <Label>Name</Label>
+              <Label>{t("pose.name")}</Label>
               <Input value={name} onChange={(e) => setName(e.target.value)} autoFocus />
             </div>
             <div>
-              <Label>Sanskrit name</Label>
+              <Label>{t("pose.sanskrit")}</Label>
               <Input
                 value={sanskrit}
                 onChange={(e) => setSanskrit(e.target.value)}
@@ -218,7 +220,7 @@ export function PoseFormDialog({ open, onOpenChange, pose }: Props) {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Duration (seconds)</Label>
+                <Label>{t("pose.duration")}</Label>
                 <Input
                   type="number"
                   value={duration}
@@ -226,7 +228,7 @@ export function PoseFormDialog({ open, onOpenChange, pose }: Props) {
                 />
               </div>
               <div>
-                <Label>Difficulty</Label>
+                <Label>{t("pose.difficulty")}</Label>
                 <Select
                   value={difficulty}
                   onValueChange={(v) => setDifficulty(v as Difficulty)}
@@ -245,7 +247,7 @@ export function PoseFormDialog({ open, onOpenChange, pose }: Props) {
               </div>
             </div>
             <div>
-              <Label>Notes / Description</Label>
+              <Label>{t("pose.notes")}</Label>
               <Textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -257,7 +259,7 @@ export function PoseFormDialog({ open, onOpenChange, pose }: Props) {
 
         <div className="space-y-3">
           <div>
-            <Label className="mb-2 block">Categories</Label>
+            <Label className="mb-2 block">{t("pose.categories")}</Label>
             <div className="flex flex-wrap gap-1.5">
               {categories.map((c) => {
                 const active = categoryIds.includes(c.id);
@@ -286,7 +288,7 @@ export function PoseFormDialog({ open, onOpenChange, pose }: Props) {
 
           {availableSubcategories.length > 0 && (
             <div>
-              <Label className="mb-2 block">Subcategory</Label>
+              <Label className="mb-2 block">{t("pose.subcategory")}</Label>
               <div className="flex flex-wrap gap-1.5">
                 <button
                   type="button"
@@ -323,7 +325,7 @@ export function PoseFormDialog({ open, onOpenChange, pose }: Props) {
           )}
 
           <div>
-            <Label className="mb-2 block">Tags</Label>
+            <Label className="mb-2 block">{t("pose.tags")}</Label>
             <div className="mb-2 flex flex-wrap gap-1.5">
               {tags.map((t) => {
                 const active = tagIds.includes(t.id);
@@ -380,7 +382,7 @@ export function PoseFormDialog({ open, onOpenChange, pose }: Props) {
                 variant="ghost"
                 className="text-destructive hover:text-destructive"
                 onClick={() => {
-                  if (confirm("Delete this pose?")) remove.mutate();
+                  if (confirm(t("pose.deleteConfirm"))) remove.mutate();
                 }}
               >
                 Delete

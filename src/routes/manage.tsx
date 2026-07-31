@@ -32,6 +32,8 @@ import {
 } from "@/lib/yoga-api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { LanguageSettings } from "@/components/LanguageSettings";
+import { useT } from "@/lib/i18n";
 
 export const Route = createFileRoute("/manage")({
   head: () => ({
@@ -55,16 +57,21 @@ export const Route = createFileRoute("/manage")({
 });
 
 function ManagePage() {
+  const t = useT();
   return (
     <div className="mx-auto max-w-5xl px-6 py-10">
       <header className="mb-8">
-        <p className="label-eyebrow">Settings</p>
-        <h1 className="mt-1 font-serif text-4xl">Categories &amp; hashtags</h1>
+        <p className="label-eyebrow">{t("settings.eyebrow")}</p>
+        <h1 className="mt-1 font-serif text-4xl">{t("settings.title")}</h1>
         <p className="mt-2 max-w-xl text-sm text-ink-muted">
           Everything here is editable — changes apply everywhere the category or
           hashtag is used. Expand a category to manage its subcategories.
         </p>
       </header>
+
+      <div className="mb-10 max-w-md">
+        <LanguageSettings />
+      </div>
 
       <div className="grid gap-10 lg:grid-cols-2">
         <CategoriesPanel />
@@ -77,6 +84,7 @@ function ManagePage() {
 /* ------------------------------------------------------------------ */
 
 function CategoriesPanel() {
+  const t = useT();
   const qc = useQueryClient();
   const { data: categories = [] } = useQuery({
     queryKey: ["categories"],
@@ -130,7 +138,7 @@ function CategoriesPanel() {
 
   return (
     <section>
-      <PanelHeader title="Categories" count={categories.length} />
+      <PanelHeader title={t("manage.categories")} count={categories.length} />
 
       <form
         className="mb-4 flex gap-2"
@@ -142,7 +150,7 @@ function CategoriesPanel() {
         <Input
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
-          placeholder="New category"
+          placeholder={t("manage.newCategory")}
         />
         <Button type="submit" disabled={!newName.trim()}>
           <Plus className="size-4" />
@@ -163,7 +171,7 @@ function CategoriesPanel() {
               ) : (
                 <>
                   <IconBtn
-                    label="Subcategories"
+                    label={t("manage.subcategories")}
                     onClick={() =>
                       setExpandedId((cur) => (cur === c.id ? null : c.id))
                     }
@@ -188,11 +196,11 @@ function CategoriesPanel() {
                   <span className="shrink-0 text-xs text-ink-muted">
                     {c.pose_count ?? 0}
                   </span>
-                  <IconBtn label="Move up" onClick={() => move(i, -1)} disabled={i === 0}>
+                  <IconBtn label={t("common.moveUp")} onClick={() => move(i, -1)} disabled={i === 0}>
                     <ArrowUp className="size-3.5" />
                   </IconBtn>
                   <IconBtn
-                    label="Move down"
+                    label={t("common.moveDown")}
                     onClick={() => move(i, 1)}
                     disabled={i === categories.length - 1}
                   >
@@ -209,7 +217,7 @@ function CategoriesPanel() {
                       onConfirm={() => remove.mutate(c.id)}
                     />
                   ) : (
-                    <IconBtn label="Delete" onClick={() => setConfirmId(c.id)}>
+                    <IconBtn label={t("common.delete")} onClick={() => setConfirmId(c.id)}>
                       <Trash2 className="size-3.5" />
                     </IconBtn>
                   )}
@@ -219,7 +227,7 @@ function CategoriesPanel() {
             {expandedId === c.id && <SubcategoriesEditor categoryId={c.id} />}
           </li>
         ))}
-        {categories.length === 0 && <EmptyRow text="No categories yet." />}
+        {categories.length === 0 && <EmptyRow text={t("manage.noCategories")} />}
       </ul>
     </section>
   );
@@ -228,6 +236,7 @@ function CategoriesPanel() {
 /* ------------------------------------------------------------------ */
 
 function SubcategoriesEditor({ categoryId }: { categoryId: string }) {
+  const t = useT();
   const qc = useQueryClient();
   const { data: all = [] } = useQuery({
     queryKey: ["subcategories"],
@@ -310,11 +319,11 @@ function SubcategoriesEditor({ categoryId }: { categoryId: string }) {
                 <span className="shrink-0 text-[11px] text-ink-muted">
                   {s.pose_count ?? 0}
                 </span>
-                <IconBtn label="Move up" onClick={() => move(i, -1)} disabled={i === 0}>
+                <IconBtn label={t("common.moveUp")} onClick={() => move(i, -1)} disabled={i === 0}>
                   <ArrowUp className="size-3" />
                 </IconBtn>
                 <IconBtn
-                  label="Move down"
+                  label={t("common.moveDown")}
                   onClick={() => move(i, 1)}
                   disabled={i === subs.length - 1}
                 >
@@ -331,7 +340,7 @@ function SubcategoriesEditor({ categoryId }: { categoryId: string }) {
                     onConfirm={() => remove.mutate(s.id)}
                   />
                 ) : (
-                  <IconBtn label="Delete" onClick={() => setConfirmId(s.id)}>
+                  <IconBtn label={t("common.delete")} onClick={() => setConfirmId(s.id)}>
                     <Trash2 className="size-3" />
                   </IconBtn>
                 )}
@@ -353,7 +362,7 @@ function SubcategoriesEditor({ categoryId }: { categoryId: string }) {
         <Input
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
-          placeholder="New subcategory"
+          placeholder={t("manage.newSubcategory")}
           className="h-7 text-xs"
         />
         <Button type="submit" size="sm" variant="outline" disabled={!newName.trim()}>
@@ -367,6 +376,7 @@ function SubcategoriesEditor({ categoryId }: { categoryId: string }) {
 /* ------------------------------------------------------------------ */
 
 function TagsPanel() {
+  const t = useT();
   const qc = useQueryClient();
   const { data: tags = [] } = useQuery({ queryKey: ["tags"], queryFn: fetchTags });
   const [newName, setNewName] = useState("");
@@ -404,7 +414,7 @@ function TagsPanel() {
 
   return (
     <section>
-      <PanelHeader title="Hashtags" count={tags.length} />
+      <PanelHeader title={t("manage.hashtags")} count={tags.length} />
 
       <form
         className="mb-4 flex gap-2"
@@ -416,7 +426,7 @@ function TagsPanel() {
         <Input
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
-          placeholder="New hashtag"
+          placeholder={t("manage.newHashtag")}
         />
         <Button type="submit" disabled={!newName.trim()}>
           <Plus className="size-4" />
@@ -428,16 +438,16 @@ function TagsPanel() {
       </p>
 
       <ul className="divide-y divide-line rounded-lg border border-line bg-surface/40">
-        {tags.map((t: Tag) => {
-          const uses = (t.pose_count ?? 0) + (t.sequence_count ?? 0);
+        {tags.map((tg: Tag) => {
+          const uses = (tg.pose_count ?? 0) + (tg.sequence_count ?? 0);
           return (
-            <li key={t.id} className="flex items-center gap-2 px-3 py-2">
-              {editingId === t.id ? (
+            <li key={tg.id} className="flex items-center gap-2 px-3 py-2">
+              {editingId === tg.id ? (
                 <RowEditor
                   value={draft}
                   onChange={setDraft}
                   onCancel={() => setEditingId(null)}
-                  onSave={() => rename.mutate({ id: t.id, name: draft })}
+                  onSave={() => rename.mutate({ id: tg.id, name: draft })}
                 />
               ) : (
                 <>
@@ -445,14 +455,14 @@ function TagsPanel() {
                     type="button"
                     className="flex-1 truncate text-left text-sm hover:text-ink-muted"
                     onClick={() => {
-                      setEditingId(t.id);
-                      setDraft(t.name);
+                      setEditingId(tg.id);
+                      setDraft(tg.name);
                     }}
                   >
-                    #{t.name}
+                    #{tg.name}
                   </button>
                   <span className="shrink-0 text-xs text-ink-muted">{uses}</span>
-                  {confirmId === t.id ? (
+                  {confirmId === tg.id ? (
                     <ConfirmDelete
                       hint={
                         uses > 0
@@ -460,10 +470,10 @@ function TagsPanel() {
                           : undefined
                       }
                       onCancel={() => setConfirmId(null)}
-                      onConfirm={() => remove.mutate(t.id)}
+                      onConfirm={() => remove.mutate(tg.id)}
                     />
                   ) : (
-                    <IconBtn label="Delete" onClick={() => setConfirmId(t.id)}>
+                    <IconBtn label={t("common.delete")} onClick={() => setConfirmId(tg.id)}>
                       <Trash2 className="size-3.5" />
                     </IconBtn>
                   )}
@@ -472,7 +482,7 @@ function TagsPanel() {
             </li>
           );
         })}
-        {tags.length === 0 && <EmptyRow text="No hashtags yet." />}
+        {tags.length === 0 && <EmptyRow text={t("manage.noHashtags")} />}
       </ul>
     </section>
   );
@@ -529,6 +539,7 @@ function RowEditor({
   onSave: () => void;
   onCancel: () => void;
 }) {
+  const t = useT();
   return (
     <div className="flex flex-1 items-center gap-2">
       <Input
@@ -541,10 +552,10 @@ function RowEditor({
         }}
         className="h-8"
       />
-      <IconBtn label="Save" onClick={onSave}>
+      <IconBtn label={t("common.save")} onClick={onSave}>
         <Check className="size-3.5" />
       </IconBtn>
-      <IconBtn label="Cancel" onClick={onCancel}>
+      <IconBtn label={t("common.cancel")} onClick={onCancel}>
         <X className="size-3.5" />
       </IconBtn>
     </div>
@@ -560,6 +571,7 @@ function ConfirmDelete({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const t = useT();
   return (
     <span className="flex items-center gap-2">
       {hint && <span className="text-xs text-ink-muted">{hint}</span>}
@@ -568,9 +580,9 @@ function ConfirmDelete({
         onClick={onConfirm}
         className="rounded-md bg-ink px-2 py-1 text-xs text-background"
       >
-        Delete
+        {t("common.delete")}
       </button>
-      <IconBtn label="Cancel" onClick={onCancel}>
+      <IconBtn label={t("common.cancel")} onClick={onCancel}>
         <X className="size-3.5" />
       </IconBtn>
     </span>

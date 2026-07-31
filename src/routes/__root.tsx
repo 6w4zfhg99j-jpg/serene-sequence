@@ -12,6 +12,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AppNav } from "@/components/AppNav";
 import { Toaster } from "@/components/ui/sonner";
+import { I18nProvider } from "@/lib/i18n";
 
 function NotFoundComponent() {
   return (
@@ -111,11 +112,13 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="min-h-screen bg-background text-foreground">
-        <AppNav />
-        <Outlet />
-        <Toaster />
-      </div>
+      <I18nProvider>
+        <div className="min-h-screen bg-background text-foreground">
+          <AppNav />
+          <Outlet />
+          <Toaster />
+        </div>
+      </I18nProvider>
     </QueryClientProvider>
   );
 }

@@ -12,6 +12,7 @@ import {
 import type { Folder } from "@/lib/yoga-api";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useT } from "@/lib/i18n";
 
 export type FolderSelection =
   | { kind: "all" }
@@ -54,6 +55,7 @@ export function FolderTree({
   onDelete,
   onDropSequence,
 }: FolderTreeProps) {
+  const t = useT();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
@@ -111,7 +113,7 @@ export function FolderTree({
             onClick={() => setExpanded((s) => ({ ...s, [f.id]: !open }))}
             className={kids.length ? "shrink-0" : "shrink-0 opacity-0"}
             tabIndex={kids.length ? 0 : -1}
-            aria-label={open ? "Collapse folder" : "Expand folder"}
+            aria-label={open ? t("home.collapseFolder") : t("home.expandFolder")}
           >
             <ChevronRight
               className={"size-3.5 transition-transform " + (open ? "rotate-90" : "")}
@@ -154,7 +156,7 @@ export function FolderTree({
               <span className="flex shrink-0 items-center opacity-0 transition-opacity group-hover:opacity-100">
                 <button
                   type="button"
-                  title="New subfolder"
+                  title={t("home.newSubfolder")}
                   onClick={() => startAdd(f.id)}
                   className="p-1"
                 >
@@ -162,7 +164,7 @@ export function FolderTree({
                 </button>
                 <button
                   type="button"
-                  title="Rename"
+                  title={t("common.rename")}
                   onClick={() => {
                     setRenamingId(f.id);
                     setDraft(f.name);
@@ -173,7 +175,7 @@ export function FolderTree({
                 </button>
                 <button
                   type="button"
-                  title="Delete folder"
+                  title={t("home.deleteFolder")}
                   onClick={() => onDelete(f.id)}
                   className="p-1"
                 >
@@ -189,7 +191,7 @@ export function FolderTree({
             <Input
               autoFocus
               value={newName}
-              placeholder="Folder name"
+              placeholder={t("home.folderName")}
               onChange={(e) => setNewName(e.target.value)}
               onBlur={commitAdd}
               onKeyDown={(e) => {
@@ -216,7 +218,7 @@ export function FolderTree({
         className={rowClass(selection.kind === "all", false)}
       >
         <Layers className="size-3.5" strokeWidth={1.5} />
-        <span>All sequences</span>
+        <span>{t("home.allSequences")}</span>
         <span
           className={
             "ml-auto text-xs " +
@@ -264,7 +266,7 @@ export function FolderTree({
           <span className="label-eyebrow">Folders</span>
           <button
             type="button"
-            title="New folder"
+            title={t("home.newFolder")}
             onClick={() => startAdd(null)}
             className="p-1 text-ink-muted hover:text-ink"
           >
@@ -279,7 +281,7 @@ export function FolderTree({
             <Input
               autoFocus
               value={newName}
-              placeholder="Folder name"
+              placeholder={t("home.folderName")}
               onChange={(e) => setNewName(e.target.value)}
               onBlur={commitAdd}
               onKeyDown={(e) => {
