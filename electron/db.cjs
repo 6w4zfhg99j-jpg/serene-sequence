@@ -121,6 +121,20 @@ function init(dbPath) {
   if (!poseCols.includes("subcategory_id")) {
     db.exec("ALTER TABLE poses ADD COLUMN subcategory_id TEXT REFERENCES subcategories(id) ON DELETE SET NULL");
   }
+  // Manual library ordering.
+  if (!poseCols.includes("sort_order")) {
+    db.exec("ALTER TABLE poses ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0");
+    const ids = db.prepare("SELECT id FROM poses ORDER BY name").all();
+    const upd = db.prepare("UPDATE poses SET sort_order = ? WHERE id = ?");
+    db.transaction(() => ids.forEach((r, i) => upd.run(i, r.id)))();
+  }
+  // Carry single-subcategory assignments into the multi-subcategory link table.
+  db.exec(`
+    INSERT OR IGNORE INTO pose_subcategories (pose_id, subcategory_id)
+    SELECT id, subcategory_id FROM poses WHERE subcategory_id IS NOT NULL
+  `);
+  db.exec("CREATE INDEX IF NOT EXISTS idx_pose_subcats ON pose_subcategories(subcategory_id)");
+
 
   // Migration for databases created before folders existed.
   const seqCols = db.prepare("PRAGMA table_info(sequences)").all().map((c) => c.name);
