@@ -1,5 +1,8 @@
 {
-  "name": "tanstack_start_ts",
+  "name": "asana-yoga-studio",
+  "version": "1.0.0",
+  "description": "Asana — a personal offline desktop app for creating yoga sequences",
+  "author": "Asana Personal Yoga Studio",
   "private": true,
   "sideEffects": false,
   "type": "module",
