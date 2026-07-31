@@ -31,7 +31,7 @@ export const LANGUAGES: { code: LangCode; label: string; english: string }[] = [
   { code: "de", label: "Deutsch", english: "German" },
 ];
 
-const STORAGE_KEY = "asana.language.v1";
+const STORAGE_KEY = "vona.language.v1";
 
 function readStored(): LangCode | null {
   if (typeof window === "undefined") return null;

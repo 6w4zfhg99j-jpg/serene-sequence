@@ -9,6 +9,9 @@ const images = require("./images.cjs");
 
 const isDev = !!process.env.ELECTRON_START_URL;
 
+// Menu bar / Dock title (matches productName in electron-builder.yml).
+app.setName("VONA");
+
 // The renderer is a static SPA built into dist/client. It references its assets
 // with absolute paths ("/assets/..."), which cannot resolve over file://.
 // We therefore serve it from a custom "app://" scheme with an SPA fallback.
@@ -26,7 +29,7 @@ protocol.registerSchemesAsPrivileged([
 ]);
 
 function ensureDirs() {
-  const dir = path.join(app.getPath("userData"), "asana");
+  const dir = path.join(app.getPath("userData"), "vona");
   const imgDir = path.join(dir, "images");
   fs.mkdirSync(imgDir, { recursive: true });
   return { dir, imgDir };
@@ -48,7 +51,7 @@ function createWindow() {
   if (isDev) {
     win.loadURL(process.env.ELECTRON_START_URL);
   } else {
-    win.loadURL("app://asana/");
+    win.loadURL("app://vona/");
   }
 }
 
@@ -92,11 +95,11 @@ app.whenReady().then(() => {
   const { dir, imgDir } = ensureDirs();
 
   try {
-    db.init(path.join(dir, "asana.db"));
+    db.init(path.join(dir, "vona.db"));
     images.init(imgDir);
   } catch (err) {
     dialog.showErrorBox(
-      "Asana could not start",
+      "VONA could not start",
       `The local database failed to open.\n\n${err && err.stack ? err.stack : String(err)}`,
     );
     app.quit();

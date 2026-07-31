@@ -1,6 +1,6 @@
-appId: com.asana.yoga
-productName: Asana
-copyright: Asana Personal Yoga Studio
+appId: com.vona.yoga
+productName: VONA
+copyright: VONA Personal Yoga Studio
 
 directories:
   output: release
@@ -32,9 +32,13 @@ mac:
   identity: null
   gatekeeperAssess: false
   icon: build/icon.png
+  extendInfo:
+    CFBundleName: VONA
+    CFBundleDisplayName: VONA
 
 dmg:
-  title: Asana
+  title: VONA
+  artifactName: VONA-${version}-${arch}.dmg
   icon: build/icon.png
   window:
     width: 540

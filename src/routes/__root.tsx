@@ -63,13 +63,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Asana — Personal Yoga Sequence Studio" },
+      { title: "VONA — Personal Yoga Sequence Studio" },
       {
         name: "description",
         content:
           "A personal studio for building, saving, and printing yoga sequences from your own pose library.",
       },
-      { property: "og:title", content: "Asana — Personal Yoga Sequence Studio" },
+      { property: "og:title", content: "VONA — Personal Yoga Sequence Studio" },
       {
         property: "og:description",
         content: "Build, save, and print yoga sequences from your own pose library.",

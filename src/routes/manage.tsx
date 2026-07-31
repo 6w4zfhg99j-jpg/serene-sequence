@@ -38,13 +38,13 @@ import { useT } from "@/lib/i18n";
 export const Route = createFileRoute("/manage")({
   head: () => ({
     meta: [
-      { title: "Categories & Hashtags — Asana" },
+      { title: "Categories & Hashtags — VONA" },
       {
         name: "description",
         content:
           "Add, rename, reorder and delete the categories and hashtags used across your yoga pose library.",
       },
-      { property: "og:title", content: "Categories & Hashtags — Asana" },
+      { property: "og:title", content: "Categories & Hashtags — VONA" },
       {
         property: "og:description",
         content: "Manage your yoga pose categories and hashtags.",

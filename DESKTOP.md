@@ -7,7 +7,7 @@ npm install
 npm run desktop:dmg
 ```
 
-The installer lands in `release/Asana-<version>-arm64.dmg`.
+The installer lands in `release/VONA-<version>-arm64.dmg`.
 
 What that single command does:
 
@@ -21,8 +21,8 @@ What that single command does:
 
 - The build is **unsigned** (no Apple Developer account needed). The first launch
   needs right-click → Open, or System Settings → Privacy & Security → Open Anyway.
-- Data lives locally: `~/Library/Application Support/Asana/asana/asana.db`
-  and photos in `.../asana/images`. On first launch the database is created with
+- Data lives locally: `~/Library/Application Support/VONA/vona/vona.db`
+  and photos in `.../vona/images`. On first launch the database is created with
   the 16 default categories; poses and sequences start empty — the desktop app
   does not read the cloud preview's data.
 - Dev mode: `npm run dev` in one terminal, `npm run electron:dev` in another.
