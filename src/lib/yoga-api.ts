@@ -133,7 +133,7 @@ export async function fetchSubcategories(): Promise<Subcategory[]> {
   if (local) return local.subcategories.list();
   const { data, error } = await supabase
     .from("subcategories")
-    .select("id, category_id, name, sort_order, poses(count)")
+    .select("id, category_id, name, sort_order, pose_subcategories(count)")
     .order("sort_order");
   if (error) throw error;
   return (data ?? []).map((s: any) => ({
@@ -141,7 +141,7 @@ export async function fetchSubcategories(): Promise<Subcategory[]> {
     category_id: s.category_id,
     name: s.name,
     sort_order: s.sort_order,
-    pose_count: s.poses?.[0]?.count ?? 0,
+    pose_count: s.pose_subcategories?.[0]?.count ?? 0,
   }));
 }
 
