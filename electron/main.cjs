@@ -37,6 +37,7 @@ function ensureDirs() {
 
 function createWindow() {
   const win = new BrowserWindow({
+    title: "VONA",
     width: 1400,
     height: 900,
     backgroundColor: "#fbf9f4",
