@@ -77,9 +77,9 @@ const LEVELS: Level[] = ["all-levels", "beginner", "intermediate", "advanced"];
 export const Route = createFileRoute("/sequences/$id")({
   head: () => ({
     meta: [
-      { title: "Sequence — Asana" },
+      { title: "Sequence — VONA" },
       { name: "description", content: "Build and edit a yoga sequence." },
-      { property: "og:title", content: "Sequence — Asana" },
+      { property: "og:title", content: "Sequence — VONA" },
       { property: "og:description", content: "Build and edit a yoga sequence." },
     ],
   }),

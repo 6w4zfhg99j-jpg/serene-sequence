@@ -1,8 +1,8 @@
 {
-  "name": "asana-yoga-studio",
+  "name": "vona-yoga-studio",
   "version": "1.0.0",
-  "description": "Asana — a personal offline desktop app for creating yoga sequences",
-  "author": "Asana Personal Yoga Studio",
+  "description": "VONA — a personal offline desktop app for creating yoga sequences",
+  "author": "VONA Personal Yoga Studio",
   "private": true,
   "sideEffects": false,
   "type": "module",

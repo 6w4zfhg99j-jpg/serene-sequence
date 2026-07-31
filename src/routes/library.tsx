@@ -182,9 +182,9 @@ function CategoryGroupedGrid({
 export const Route = createFileRoute("/library")({
   head: () => ({
     meta: [
-      { title: "Pose Library — Asana" },
+      { title: "Pose Library — VONA" },
       { name: "description", content: "Your personal library of yoga poses with photos, categories, tags, and notes." },
-      { property: "og:title", content: "Pose Library — Asana" },
+      { property: "og:title", content: "Pose Library — VONA" },
       { property: "og:description", content: "Your personal library of yoga poses." },
     ],
   }),

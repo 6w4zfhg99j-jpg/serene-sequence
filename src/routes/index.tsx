@@ -43,13 +43,13 @@ import { useT } from "@/lib/i18n";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Sequences — Asana Personal Yoga Studio" },
+      { title: "Sequences — VONA Personal Yoga Studio" },
       {
         name: "description",
         content:
           "Your saved yoga sequences, organized in folders you can create, rename, and rearrange anytime.",
       },
-      { property: "og:title", content: "Sequences — Asana" },
+      { property: "og:title", content: "Sequences — VONA" },
       {
         property: "og:description",
         content: "Your saved yoga sequences, organized in editable folders.",

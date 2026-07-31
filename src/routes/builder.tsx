@@ -9,9 +9,9 @@ import { useT } from "@/lib/i18n";
 export const Route = createFileRoute("/builder")({
   head: () => ({
     meta: [
-      { title: "New sequence — Asana" },
+      { title: "New sequence — VONA" },
       { name: "description", content: "Start a new yoga sequence." },
-      { property: "og:title", content: "New sequence — Asana" },
+      { property: "og:title", content: "New sequence — VONA" },
       { property: "og:description", content: "Start a new yoga sequence." },
     ],
   }),
