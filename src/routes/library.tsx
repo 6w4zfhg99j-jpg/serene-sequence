@@ -67,29 +67,30 @@ function CategoryGroupedGrid({
   }, [poses, categories, filters.categoryId]);
 
   return (
-    <div className="space-y-12">
+    <div className="space-y-10">
       {groups.map((g, i) => (
-        <section key={g.category?.id ?? "uncategorized"} className="space-y-4">
-          <div className="flex items-baseline justify-between gap-4 border-b border-line pb-2">
-            <h2 className="font-serif text-2xl">
+        <section key={g.category?.id ?? "uncategorized"} className="space-y-3">
+          <div className="flex items-baseline justify-between gap-4 border-b border-line pb-1.5">
+            <h2 className="font-serif text-xl">
               {g.category?.name ?? "Uncategorized"}
             </h2>
             <span className="text-xs text-ink-subtle">
               {g.poses.length} {g.poses.length === 1 ? "pose" : "poses"}
             </span>
           </div>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
             {g.poses.map((p) => (
               <PoseCard
                 key={p.id}
                 pose={p}
+                dense
                 onClick={() => onEdit(p)}
                 onFavorite={() => onFavorite(p)}
               />
             ))}
           </div>
           {i < groups.length - 1 && (
-            <div className="pt-2 text-center text-ink-subtle">─────</div>
+            <div className="pt-1 text-center text-ink-subtle">─────</div>
           )}
         </section>
       ))}
