@@ -16,7 +16,8 @@
     "format": "prettier --write .",
     "electron:dev": "ELECTRON_START_URL=http://localhost:8080 electron .",
     "build:desktop": "ELECTRON_BUILD=1 vite build",
-    "desktop:dmg": "npm run build:desktop && electron-builder install-app-deps && electron-builder --mac dmg --arm64"
+    "desktop:dmg": "npm run desktop:clean && npm run build:desktop && electron-builder install-app-deps && electron-builder --mac dmg --arm64",
+    "desktop:clean": "rm -rf release dist"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
