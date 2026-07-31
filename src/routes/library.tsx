@@ -81,16 +81,13 @@ function LibraryPage() {
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-              {filtered.map((p) => (
-                <PoseCard
-                  key={p.id}
-                  pose={p}
-                  onClick={() => setEditing(p)}
-                  onFavorite={() => fav.mutate(p)}
-                />
-              ))}
-            </div>
+            <CategoryGroupedGrid
+              poses={filtered}
+              categories={categories}
+              filters={filters}
+              onEdit={(p) => setEditing(p)}
+              onFavorite={(p) => fav.mutate(p)}
+            />
           )}
         </div>
       </div>
