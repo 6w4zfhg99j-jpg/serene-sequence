@@ -2,12 +2,27 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
+import {
+  DndContext,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  rectSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 import {
   fetchCategories,
   fetchPoses,
   fetchSubcategories,
   fetchTags,
+  reorderPoses,
   toggleFavorite,
   type Category,
   type Pose,
@@ -25,21 +40,60 @@ interface Group {
   poses: Pose[];
 }
 
+/** A pose card that can be dragged to a new position within its section. */
+function SortablePoseCard({
+  pose,
+  onEdit,
+  onFavorite,
+}: {
+  pose: Pose;
+  onEdit: (p: Pose) => void;
+  onFavorite: (p: Pose) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: pose.id });
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.4 : 1,
+      }}
+      className="touch-none"
+      {...attributes}
+      {...listeners}
+    >
+      <PoseCard
+        pose={pose}
+        dense
+        onClick={() => onEdit(pose)}
+        onFavorite={() => onFavorite(pose)}
+      />
+    </div>
+  );
+}
+
 function CategorySection({
   group,
   subcategories,
   onEdit,
   onFavorite,
+  onReorder,
 }: {
   group: Group;
   subcategories: Subcategory[];
   onEdit: (p: Pose) => void;
   onFavorite: (p: Pose) => void;
+  onReorder: (activeId: string, overId: string) => void;
 }) {
   const t = useT();
   const catLabel = useCategoryLabel();
   // Notion-style subcategory chips, scoped to this category section.
   const [activeSub, setActiveSub] = useState<string | null>(null);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+  );
   const subs = useMemo(
     () =>
       subcategories
@@ -49,9 +103,19 @@ function CategorySection({
   );
   const visible = useMemo(
     () =>
-      activeSub ? group.poses.filter((p) => p.subcategory_id === activeSub) : group.poses,
+      activeSub
+        ? group.poses.filter((p) => p.subcategory_ids.includes(activeSub))
+        : group.poses,
     [group.poses, activeSub],
   );
+
+  function handleDragEnd(e: DragEndEvent) {
+    const { active, over } = e;
+    if (over && active.id !== over.id) {
+      onReorder(String(active.id), String(over.id));
+    }
+  }
+
 
   return (
     <section className="space-y-3">
