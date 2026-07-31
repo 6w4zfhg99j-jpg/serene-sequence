@@ -23,8 +23,17 @@ async function loadImageAsDataUrl(url: string): Promise<{ dataUrl: string; w: nu
   }
 }
 
-export async function exportSequencePdf(seq: Sequence, opts: { includeNotes: boolean }) {
+export type PdfLayout = "list" | "grid";
+
+export async function exportSequencePdf(
+  seq: Sequence,
+  opts: { includeNotes: boolean; layout?: PdfLayout }
+) {
+  if ((opts.layout ?? "list") === "grid") {
+    return exportSequenceGridPdf(seq);
+  }
   const doc = new jsPDF({ unit: "mm", format: "a4" });
+
   const pageW = 210;
   const pageH = 297;
   const margin = 16;
