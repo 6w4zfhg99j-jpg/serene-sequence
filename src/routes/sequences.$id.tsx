@@ -371,18 +371,43 @@ function SequenceEditor() {
           <DialogHeader>
             <DialogTitle className="font-serif text-2xl">Export PDF</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3 py-2">
-            <label className="flex items-center gap-2">
-              <Checkbox
-                checked={includeNotes}
-                onCheckedChange={(v) => setIncludeNotes(!!v)}
-              />
-              <span>Include per-pose notes</span>
-            </label>
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-2 gap-2">
+              {(
+                [
+                  ["grid", "Compact grid", "Thumbnails + names, fills the page"],
+                  ["list", "Detailed list", "One pose per row with cues"],
+                ] as const
+              ).map(([val, title, sub]) => (
+                <button
+                  key={val}
+                  onClick={() => setLayout(val)}
+                  className={
+                    "rounded-lg border p-3 text-left transition-colors " +
+                    (layout === val
+                      ? "border-accent bg-accent/10"
+                      : "border-line hover:border-ink-muted")
+                  }
+                >
+                  <span className="block text-sm font-medium">{title}</span>
+                  <span className="mt-0.5 block text-xs text-ink-muted">{sub}</span>
+                </button>
+              ))}
+            </div>
+            {layout === "list" && (
+              <label className="flex items-center gap-2">
+                <Checkbox
+                  checked={includeNotes}
+                  onCheckedChange={(v) => setIncludeNotes(!!v)}
+                />
+                <span>Include per-pose notes</span>
+              </label>
+            )}
             <p className="text-xs text-ink-muted">
               Formatted for A4 with clean margins. Prints beautifully.
             </p>
           </div>
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowExport(false)}>
               Cancel
