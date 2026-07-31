@@ -11,7 +11,9 @@ files:
   - electron/**/*
   - dist/client/**/*
   - package.json
+  - node_modules/**/*
   - "!**/*.map"
+
 
 # better-sqlite3 is a native module and must stay outside the asar archive.
 asarUnpack:
