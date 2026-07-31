@@ -30,11 +30,21 @@ export interface LocalBridge {
     toggleFavorite(id: string, next: boolean): Promise<void>;
     remove(id: string): Promise<void>;
   };
-  categories: { list(): Promise<Category[]> };
+  categories: {
+    list(): Promise<Category[]>;
+    create(name: string): Promise<Category>;
+    update(id: string, name: string): Promise<void>;
+    remove(id: string): Promise<void>;
+    reorder(ids: string[]): Promise<void>;
+  };
   tags: {
     list(): Promise<Tag[]>;
     create(name: string): Promise<Tag>;
+    update(id: string, name: string): Promise<void>;
+    merge(sourceId: string, targetId: string): Promise<void>;
+    remove(id: string): Promise<void>;
   };
+
   sequences: {
     list(): Promise<SequenceListItem[]>;
     get(id: string): Promise<Sequence>;

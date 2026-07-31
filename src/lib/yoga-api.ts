@@ -8,11 +8,15 @@ export interface Category {
   id: string;
   name: string;
   sort_order: number;
+  pose_count?: number;
 }
 export interface Tag {
   id: string;
   name: string;
+  pose_count?: number;
+  sequence_count?: number;
 }
+
 export interface Pose {
   id: string;
   name: string;
@@ -83,19 +87,33 @@ export async function fetchCategories(): Promise<Category[]> {
   if (local) return local.categories.list();
   const { data, error } = await supabase
     .from("categories")
-    .select("*")
+    .select("*, pose_categories(count)")
     .order("sort_order");
   if (error) throw error;
-  return data as Category[];
+  return (data ?? []).map((c: any) => ({
+    id: c.id,
+    name: c.name,
+    sort_order: c.sort_order,
+    pose_count: c.pose_categories?.[0]?.count ?? 0,
+  }));
 }
 
 export async function fetchTags(): Promise<Tag[]> {
   const local = localBridge();
   if (local) return local.tags.list();
-  const { data, error } = await supabase.from("tags").select("*").order("name");
+  const { data, error } = await supabase
+    .from("tags")
+    .select("*, pose_tags(count), sequence_tags(count)")
+    .order("name");
   if (error) throw error;
-  return data as Tag[];
+  return (data ?? []).map((t: any) => ({
+    id: t.id,
+    name: t.name,
+    pose_count: t.pose_tags?.[0]?.count ?? 0,
+    sequence_count: t.sequence_tags?.[0]?.count ?? 0,
+  }));
 }
+
 
 export async function fetchPoses(): Promise<Pose[]> {
   const local = localBridge();
@@ -181,6 +199,107 @@ export async function createTag(name: string): Promise<Tag> {
   if (error) throw error;
   return data as Tag;
 }
+
+// ---- Category management -----------------------------------------
+
+export async function createCategory(name: string): Promise<Category> {
+  const clean = name.trim();
+  if (!clean) throw new Error("Empty category name");
+  const local = localBridge();
+  if (local) return local.categories.create(clean);
+  const existing = await fetchCategories();
+  const dupe = existing.find((c) => c.name.toLowerCase() === clean.toLowerCase());
+  if (dupe) return dupe;
+  const sort_order = existing.reduce((m, c) => Math.max(m, c.sort_order), -1) + 1;
+  const { data, error } = await supabase
+    .from("categories")
+    .insert({ name: clean, sort_order })
+    .select()
+    .single();
+  if (error) throw error;
+  return data as Category;
+}
+
+export async function updateCategory(id: string, name: string) {
+  const clean = name.trim();
+  if (!clean) throw new Error("Empty category name");
+  const local = localBridge();
+  if (local) return local.categories.update(id, clean);
+  const { error } = await supabase.from("categories").update({ name: clean }).eq("id", id);
+  if (error) throw error;
+}
+
+export async function deleteCategory(id: string) {
+  const local = localBridge();
+  if (local) return local.categories.remove(id);
+  const { error } = await supabase.from("categories").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function reorderCategories(orderedIds: string[]) {
+  const local = localBridge();
+  if (local) return local.categories.reorder(orderedIds);
+  await Promise.all(
+    orderedIds.map((id, idx) =>
+      supabase.from("categories").update({ sort_order: idx }).eq("id", id),
+    ),
+  );
+}
+
+// ---- Tag management ----------------------------------------------
+
+export async function updateTag(id: string, name: string) {
+  const clean = name.trim().replace(/^#/, "").toLowerCase();
+  if (!clean) throw new Error("Empty tag");
+  const local = localBridge();
+  if (local) return local.tags.update(id, clean);
+  const tags = await fetchTags();
+  const clash = tags.find((t) => t.name === clean && t.id !== id);
+  if (clash) return mergeTags(id, clash.id);
+  const { error } = await supabase.from("tags").update({ name: clean }).eq("id", id);
+  if (error) throw error;
+}
+
+export async function mergeTags(sourceId: string, targetId: string) {
+  if (sourceId === targetId) return;
+  const local = localBridge();
+  if (local) return local.tags.merge(sourceId, targetId);
+  const { data: poseLinks } = await supabase
+    .from("pose_tags")
+    .select("pose_id")
+    .eq("tag_id", sourceId);
+  const { data: seqLinks } = await supabase
+    .from("sequence_tags")
+    .select("sequence_id")
+    .eq("tag_id", sourceId);
+  if (poseLinks?.length) {
+    await supabase
+      .from("pose_tags")
+      .upsert(
+        poseLinks.map((l: any) => ({ pose_id: l.pose_id, tag_id: targetId })),
+        { onConflict: "pose_id,tag_id", ignoreDuplicates: true },
+      );
+  }
+  if (seqLinks?.length) {
+    await supabase
+      .from("sequence_tags")
+      .upsert(
+        seqLinks.map((l: any) => ({ sequence_id: l.sequence_id, tag_id: targetId })),
+        { onConflict: "sequence_id,tag_id", ignoreDuplicates: true },
+      );
+  }
+  const { error } = await supabase.from("tags").delete().eq("id", sourceId);
+  if (error) throw error;
+}
+
+export async function deleteTag(id: string) {
+  const local = localBridge();
+  if (local) return local.tags.remove(id);
+  const { error } = await supabase.from("tags").delete().eq("id", id);
+  if (error) throw error;
+}
+
+
 
 // ------------------------------------------------------------------
 // Images

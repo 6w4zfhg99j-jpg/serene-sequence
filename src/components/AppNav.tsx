@@ -4,7 +4,9 @@ const NAV = [
   { to: "/builder", label: "Create Sequence" },
   { to: "/library", label: "Pose Library" },
   { to: "/", label: "Saved Sequences" },
+  { to: "/manage", label: "Manage" },
 ] as const;
+
 
 export function AppNav() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });

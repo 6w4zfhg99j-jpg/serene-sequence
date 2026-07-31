@@ -56,9 +56,17 @@ app.whenReady().then(() => {
   ipcMain.handle("poses.remove", (_e, id) => db.removePose(id));
 
   ipcMain.handle("categories.list", () => db.listCategories());
+  ipcMain.handle("categories.create", (_e, name) => db.createCategory(name));
+  ipcMain.handle("categories.update", (_e, id, name) => db.updateCategory(id, name));
+  ipcMain.handle("categories.remove", (_e, id) => db.deleteCategory(id));
+  ipcMain.handle("categories.reorder", (_e, ids) => db.reorderCategories(ids));
 
   ipcMain.handle("tags.list", () => db.listTags());
   ipcMain.handle("tags.create", (_e, name) => db.createTag(name));
+  ipcMain.handle("tags.update", (_e, id, name) => db.updateTag(id, name));
+  ipcMain.handle("tags.merge", (_e, sourceId, targetId) => db.mergeTags(sourceId, targetId));
+  ipcMain.handle("tags.remove", (_e, id) => db.deleteTag(id));
+
 
   ipcMain.handle("sequences.list", () => db.listSequences());
   ipcMain.handle("sequences.get", (_e, id) => db.getSequence(id));

@@ -153,15 +153,64 @@ function hydratePoseCategoriesTags(poses) {
 // ---------- Categories / Tags ----------
 
 function listCategories() {
-  return db.prepare("SELECT * FROM categories ORDER BY sort_order, name").all();
+  return db
+    .prepare(
+      `SELECT c.*, (SELECT COUNT(*) FROM pose_categories pc WHERE pc.category_id = c.id) AS pose_count
+       FROM categories c ORDER BY c.sort_order, c.name`,
+    )
+    .all();
+}
+
+function createCategory(rawName) {
+  const name = String(rawName ?? "").trim();
+  if (!name) throw new Error("Empty category name");
+  const existing = db
+    .prepare("SELECT * FROM categories WHERE lower(name) = lower(?)")
+    .get(name);
+  if (existing) return existing;
+  const max = db.prepare("SELECT COALESCE(MAX(sort_order), -1) AS m FROM categories").get().m;
+  const id = randomUUID();
+  db.prepare("INSERT INTO categories (id, name, sort_order) VALUES (?, ?, ?)").run(
+    id,
+    name,
+    max + 1,
+  );
+  return { id, name, sort_order: max + 1 };
+}
+
+function updateCategory(id, name) {
+  const clean = String(name ?? "").trim();
+  if (!clean) throw new Error("Empty category name");
+  db.prepare("UPDATE categories SET name = ? WHERE id = ?").run(clean, id);
+}
+
+function deleteCategory(id) {
+  db.prepare("DELETE FROM categories WHERE id = ?").run(id);
+}
+
+function reorderCategories(orderedIds) {
+  const upd = db.prepare("UPDATE categories SET sort_order = ? WHERE id = ?");
+  const tx = db.transaction((ids) => ids.forEach((cid, i) => upd.run(i, cid)));
+  tx(orderedIds);
 }
 
 function listTags() {
-  return db.prepare("SELECT id, name FROM tags ORDER BY name").all();
+  return db
+    .prepare(
+      `SELECT t.id, t.name,
+        (SELECT COUNT(*) FROM pose_tags pt WHERE pt.tag_id = t.id) AS pose_count,
+        (SELECT COUNT(*) FROM sequence_tags st WHERE st.tag_id = t.id) AS sequence_count
+       FROM tags t ORDER BY t.name`,
+    )
+    .all();
+}
+
+function normalizeTagName(raw) {
+  return String(raw ?? "").trim().replace(/^#/, "").toLowerCase();
 }
 
 function createTag(rawName) {
-  const name = String(rawName).trim().replace(/^#/, "").toLowerCase();
+  const name = normalizeTagName(rawName);
   if (!name) throw new Error("Empty tag");
   const existing = db.prepare("SELECT id, name FROM tags WHERE name = ?").get(name);
   if (existing) return existing;
@@ -169,6 +218,39 @@ function createTag(rawName) {
   db.prepare("INSERT INTO tags (id, name) VALUES (?, ?)").run(id, name);
   return { id, name };
 }
+
+/** Rename a tag; if the new name already exists, merge into that tag. */
+function updateTag(id, rawName) {
+  const name = normalizeTagName(rawName);
+  if (!name) throw new Error("Empty tag");
+  const clash = db.prepare("SELECT id FROM tags WHERE name = ? AND id != ?").get(name, id);
+  if (clash) return mergeTags(id, clash.id);
+  db.prepare("UPDATE tags SET name = ? WHERE id = ?").run(name, id);
+  return id;
+}
+
+/** Move all usages of sourceId onto targetId, then delete sourceId. */
+function mergeTags(sourceId, targetId) {
+  if (sourceId === targetId) return targetId;
+  const tx = db.transaction(() => {
+    db.prepare(
+      `INSERT OR IGNORE INTO pose_tags (pose_id, tag_id)
+       SELECT pose_id, ? FROM pose_tags WHERE tag_id = ?`,
+    ).run(targetId, sourceId);
+    db.prepare(
+      `INSERT OR IGNORE INTO sequence_tags (sequence_id, tag_id)
+       SELECT sequence_id, ? FROM sequence_tags WHERE tag_id = ?`,
+    ).run(targetId, sourceId);
+    db.prepare("DELETE FROM tags WHERE id = ?").run(sourceId);
+  });
+  tx();
+  return targetId;
+}
+
+function deleteTag(id) {
+  db.prepare("DELETE FROM tags WHERE id = ?").run(id);
+}
+
 
 // ---------- Poses ----------
 
@@ -435,8 +517,16 @@ function reorderSequenceItems(sequenceId, orderedIds) {
 module.exports = {
   init,
   listCategories,
+  createCategory,
+  updateCategory,
+  deleteCategory,
+  reorderCategories,
   listTags,
   createTag,
+  updateTag,
+  mergeTags,
+  deleteTag,
+
   listPoses,
   upsertPose,
   toggleFavorite,
