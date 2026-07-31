@@ -110,7 +110,7 @@ export function PoseFormDialog({ open, onOpenChange, pose }: Props) {
         difficulty,
         image_url: imagePath,
         is_favorite: pose?.is_favorite ?? false,
-        subcategory_id: subcategoryId,
+        subcategoryIds,
         categoryIds,
         tagIds,
       });
