@@ -23,10 +23,11 @@ function loadCollapse(): Record<string, boolean> {
   }
 }
 
-export function BuilderLibrary({ poses, categories, onAdd }: Props) {
+export function BuilderLibrary({ poses, categories, subcategories = [], onAdd }: Props) {
   const [search, setSearch] = useState("");
   const [favOnly, setFavOnly] = useState(false);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>(loadCollapse);
+  const [activeSub, setActiveSub] = useState<Record<string, string | null>>({});
   const [pulsed, setPulsed] = useState<string | null>(null);
 
   useEffect(() => {
