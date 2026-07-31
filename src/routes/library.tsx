@@ -361,6 +361,7 @@ function LibraryPage() {
               filters={filters}
               onEdit={(p) => setEditing(p)}
               onFavorite={(p) => fav.mutate(p)}
+              onReorder={handleReorder}
             />
           )}
         </div>
