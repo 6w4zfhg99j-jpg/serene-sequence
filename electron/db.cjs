@@ -35,6 +35,13 @@ function init(dbPath) {
       sort_order INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
+    CREATE TABLE IF NOT EXISTS subcategories (
+      id TEXT PRIMARY KEY,
+      category_id TEXT NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
     CREATE TABLE IF NOT EXISTS tags (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL UNIQUE,
@@ -49,6 +56,7 @@ function init(dbPath) {
       difficulty TEXT NOT NULL DEFAULT 'beginner',
       image_url TEXT,
       is_favorite INTEGER NOT NULL DEFAULT 0,
+      subcategory_id TEXT REFERENCES subcategories(id) ON DELETE SET NULL,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
@@ -86,7 +94,14 @@ function init(dbPath) {
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
     CREATE INDEX IF NOT EXISTS idx_seqposes_seq ON sequence_poses(sequence_id, position);
+    CREATE INDEX IF NOT EXISTS idx_subcats_cat ON subcategories(category_id, sort_order);
   `);
+
+  // Migration for databases created before subcategories existed.
+  const poseCols = db.prepare("PRAGMA table_info(poses)").all().map((c) => c.name);
+  if (!poseCols.includes("subcategory_id")) {
+    db.exec("ALTER TABLE poses ADD COLUMN subcategory_id TEXT REFERENCES subcategories(id) ON DELETE SET NULL");
+  }
 
   const catCount = db.prepare("SELECT COUNT(*) AS n FROM categories").get().n;
   if (catCount === 0) {
@@ -111,6 +126,7 @@ function poseRow(row) {
     difficulty: row.difficulty,
     image_url: row.image_url,
     is_favorite: unbool(row.is_favorite),
+    subcategory_id: row.subcategory_id ?? null,
     created_at: row.created_at,
     updated_at: row.updated_at,
     categories: [],
@@ -186,6 +202,56 @@ function updateCategory(id, name) {
 
 function deleteCategory(id) {
   db.prepare("DELETE FROM categories WHERE id = ?").run(id);
+}
+
+// ---------- Subcategories ----------
+
+function listSubcategories() {
+  return db
+    .prepare(
+      `SELECT s.id, s.category_id, s.name, s.sort_order,
+        (SELECT COUNT(*) FROM poses p WHERE p.subcategory_id = s.id) AS pose_count
+       FROM subcategories s ORDER BY s.sort_order, s.name`,
+    )
+    .all();
+}
+
+function createSubcategory(categoryId, rawName) {
+  const name = String(rawName ?? "").trim();
+  if (!name) throw new Error("Empty subcategory name");
+  const existing = db
+    .prepare(
+      "SELECT * FROM subcategories WHERE category_id = ? AND lower(name) = lower(?)",
+    )
+    .get(categoryId, name);
+  if (existing) return existing;
+  const max = db
+    .prepare(
+      "SELECT COALESCE(MAX(sort_order), -1) AS m FROM subcategories WHERE category_id = ?",
+    )
+    .get(categoryId).m;
+  const id = randomUUID();
+  db.prepare(
+    "INSERT INTO subcategories (id, category_id, name, sort_order) VALUES (?, ?, ?, ?)",
+  ).run(id, categoryId, name, max + 1);
+  return { id, category_id: categoryId, name, sort_order: max + 1 };
+}
+
+function updateSubcategory(id, name) {
+  const clean = String(name ?? "").trim();
+  if (!clean) throw new Error("Empty subcategory name");
+  db.prepare("UPDATE subcategories SET name = ? WHERE id = ?").run(clean, id);
+}
+
+function deleteSubcategory(id) {
+  db.prepare("UPDATE poses SET subcategory_id = NULL WHERE subcategory_id = ?").run(id);
+  db.prepare("DELETE FROM subcategories WHERE id = ?").run(id);
+}
+
+function reorderSubcategories(orderedIds) {
+  const upd = db.prepare("UPDATE subcategories SET sort_order = ? WHERE id = ?");
+  const tx = db.transaction((ids) => ids.forEach((sid, i) => upd.run(i, sid)));
+  tx(orderedIds);
 }
 
 function reorderCategories(orderedIds) {
@@ -268,7 +334,7 @@ function upsertPose(input) {
     db.prepare(
       `UPDATE poses SET
         name = ?, sanskrit_name = ?, description = ?, duration_seconds = ?,
-        difficulty = ?, image_url = ?, is_favorite = ?, updated_at = ?
+        difficulty = ?, image_url = ?, is_favorite = ?, subcategory_id = ?, updated_at = ?
        WHERE id = ?`,
     ).run(
       input.name,
@@ -278,14 +344,15 @@ function upsertPose(input) {
       input.difficulty,
       input.image_url ?? null,
       bool(input.is_favorite),
+      input.subcategory_id ?? null,
       now(),
       id,
     );
   } else {
     db.prepare(
       `INSERT INTO poses (id, name, sanskrit_name, description, duration_seconds,
-        difficulty, image_url, is_favorite, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        difficulty, image_url, is_favorite, subcategory_id, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).run(
       id,
       input.name,
@@ -295,6 +362,7 @@ function upsertPose(input) {
       input.difficulty,
       input.image_url ?? null,
       bool(input.is_favorite),
+      input.subcategory_id ?? null,
       now(),
       now(),
     );
@@ -521,6 +589,11 @@ module.exports = {
   updateCategory,
   deleteCategory,
   reorderCategories,
+  listSubcategories,
+  createSubcategory,
+  updateSubcategory,
+  deleteSubcategory,
+  reorderSubcategories,
   listTags,
   createTag,
   updateTag,

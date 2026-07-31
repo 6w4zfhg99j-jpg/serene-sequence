@@ -7,6 +7,7 @@ import type {
   Sequence,
   SequenceListItem,
   SequencePoseItem,
+  Subcategory,
   Tag,
   Level,
   Difficulty,
@@ -24,6 +25,7 @@ export interface LocalBridge {
       difficulty: Difficulty;
       image_url?: string | null;
       is_favorite?: boolean;
+      subcategory_id?: string | null;
       categoryIds: string[];
       tagIds: string[];
     }): Promise<string>;
@@ -33,6 +35,13 @@ export interface LocalBridge {
   categories: {
     list(): Promise<Category[]>;
     create(name: string): Promise<Category>;
+    update(id: string, name: string): Promise<void>;
+    remove(id: string): Promise<void>;
+    reorder(ids: string[]): Promise<void>;
+  };
+  subcategories: {
+    list(): Promise<Subcategory[]>;
+    create(categoryId: string, name: string): Promise<Subcategory>;
     update(id: string, name: string): Promise<void>;
     remove(id: string): Promise<void>;
     reorder(ids: string[]): Promise<void>;

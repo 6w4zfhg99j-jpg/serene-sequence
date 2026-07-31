@@ -106,6 +106,7 @@ export type Database = {
           is_favorite: boolean
           name: string
           sanskrit_name: string | null
+          subcategory_id: string | null
           updated_at: string
         }
         Insert: {
@@ -118,6 +119,7 @@ export type Database = {
           is_favorite?: boolean
           name: string
           sanskrit_name?: string | null
+          subcategory_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -130,9 +132,18 @@ export type Database = {
           is_favorite?: boolean
           name?: string
           sanskrit_name?: string | null
+          subcategory_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "poses_subcategory_id_fkey"
+            columns: ["subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "subcategories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sequence_poses: {
         Row: {
@@ -238,6 +249,41 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      subcategories: {
+        Row: {
+          category_id: string
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subcategories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tags: {
         Row: {
