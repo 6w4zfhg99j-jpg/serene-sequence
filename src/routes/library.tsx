@@ -1,13 +1,101 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
 
-import { fetchCategories, fetchPoses, fetchTags, toggleFavorite, type Pose } from "@/lib/yoga-api";
+import {
+  fetchCategories,
+  fetchPoses,
+  fetchTags,
+  toggleFavorite,
+  type Category,
+  type Pose,
+} from "@/lib/yoga-api";
 import { Button } from "@/components/ui/button";
 import { PoseCard } from "@/components/PoseCard";
 import { PoseFormDialog } from "@/components/PoseFormDialog";
 import { PoseFiltersPanel, usePoseFilters } from "@/components/PoseFilters";
+
+interface Group {
+  category: Category | null;
+  poses: Pose[];
+}
+
+function CategoryGroupedGrid({
+  poses,
+  categories,
+  filters,
+  onEdit,
+  onFavorite,
+}: {
+  poses: Pose[];
+  categories: Category[];
+  filters: { categoryId: string | null };
+  onEdit: (p: Pose) => void;
+  onFavorite: (p: Pose) => void;
+}) {
+  const groups = useMemo<Group[]>(() => {
+    // When a specific category is selected via the filter, render that single
+    // group only (poses are already filtered to it).
+    if (filters.categoryId) {
+      const cat = categories.find((c) => c.id === filters.categoryId) ?? null;
+      return [{ category: cat, poses }];
+    }
+    const sorted = [...categories].sort((a, b) => a.sort_order - b.sort_order);
+    const byId = new Map<string, Pose[]>();
+    const uncategorized: Pose[] = [];
+    for (const p of poses) {
+      if (p.categories.length === 0) {
+        uncategorized.push(p);
+        continue;
+      }
+      for (const c of p.categories) {
+        const arr = byId.get(c.id) ?? [];
+        arr.push(p);
+        byId.set(c.id, arr);
+      }
+    }
+    const result: Group[] = [];
+    for (const c of sorted) {
+      const arr = byId.get(c.id);
+      if (arr && arr.length) result.push({ category: c, poses: arr });
+    }
+    if (uncategorized.length) {
+      result.push({ category: null, poses: uncategorized });
+    }
+    return result;
+  }, [poses, categories, filters.categoryId]);
+
+  return (
+    <div className="space-y-12">
+      {groups.map((g, i) => (
+        <section key={g.category?.id ?? "uncategorized"} className="space-y-4">
+          <div className="flex items-baseline justify-between gap-4 border-b border-line pb-2">
+            <h2 className="font-serif text-2xl">
+              {g.category?.name ?? "Uncategorized"}
+            </h2>
+            <span className="text-xs text-ink-subtle">
+              {g.poses.length} {g.poses.length === 1 ? "pose" : "poses"}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            {g.poses.map((p) => (
+              <PoseCard
+                key={p.id}
+                pose={p}
+                onClick={() => onEdit(p)}
+                onFavorite={() => onFavorite(p)}
+              />
+            ))}
+          </div>
+          {i < groups.length - 1 && (
+            <div className="pt-2 text-center text-ink-subtle">─────</div>
+          )}
+        </section>
+      ))}
+    </div>
+  );
+}
 
 export const Route = createFileRoute("/library")({
   head: () => ({
