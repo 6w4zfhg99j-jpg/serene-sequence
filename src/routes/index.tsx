@@ -38,6 +38,7 @@ import {
   folderPaths,
   type FolderSelection,
 } from "@/components/FolderTree";
+import { useT } from "@/lib/i18n";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -69,6 +70,7 @@ function descendantIds(folders: Folder[], rootId: string): string[] {
 }
 
 function Home() {
+  const t = useT();
   const qc = useQueryClient();
   const nav = useNavigate();
   const { data: sequences = [], isLoading } = useQuery({
@@ -94,7 +96,7 @@ function Home() {
   const create = useMutation({
     mutationFn: () =>
       createSequence({
-        title: newTitle.trim() || "Untitled sequence",
+        title: newTitle.trim() || t("home.untitled"),
         folder_id: newFolderId,
       }),
     onSuccess: (id) => {
@@ -146,7 +148,7 @@ function Home() {
 
   const paths = useMemo(() => folderPaths(folders), [folders]);
   const pathLabel = (id: string | null) =>
-    id ? (paths.find((p) => p.id === id)?.label ?? "Folder") : "Main area";
+    id ? (paths.find((p) => p.id === id)?.label ?? t("home.folder")) : t("home.mainArea");
 
   const scoped = useMemo(() => {
     if (selection.kind === "all") return sequences;
@@ -161,27 +163,26 @@ function Home() {
 
   const heading =
     selection.kind === "all"
-      ? "Sequences"
+      ? t("home.heading")
       : selection.kind === "unfiled"
-        ? "Main area"
-        : (folders.find((f) => f.id === selection.id)?.name ?? "Folder");
+        ? t("home.mainArea")
+        : (folders.find((f) => f.id === selection.id)?.name ?? t("home.folder"));
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-10">
       <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="label-eyebrow">Your Studio</p>
+          <p className="label-eyebrow">{t("home.eyebrow")}</p>
           <h1 className="mt-1 font-serif text-5xl">{heading}</h1>
           <p className="mt-2 max-w-lg text-sm text-ink-muted">
-            Organize classes into folders — drag a sequence onto a folder, or use
-            the move menu. Folders can be created, renamed, and deleted anytime.
+            {t("home.description")}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search sequences..."
+            placeholder={t("home.search")}
             className="w-56"
           />
           <Button
@@ -191,7 +192,7 @@ function Home() {
             }}
           >
             <Plus className="mr-1 size-4" />
-            New sequence
+            {t("home.newSequence")}
           </Button>
         </div>
       </header>
@@ -212,22 +213,22 @@ function Home() {
 
         <div>
           {isLoading ? (
-            <p className="text-sm text-ink-muted">Loading...</p>
+            <p className="text-sm text-ink-muted">{t("common.loading")}</p>
           ) : filtered.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-line p-20 text-center">
               <h2 className="font-serif text-3xl">
                 {sequences.length === 0
-                  ? "Nothing built yet."
+                  ? t("home.emptyNone")
                   : scoped.length === 0
-                    ? "This folder is empty."
-                    : "Nothing matches."}
+                    ? t("home.emptyFolder")
+                    : t("home.emptySearch")}
               </h2>
               <p className="mt-2 text-sm text-ink-muted">
                 {sequences.length === 0
-                  ? "Start with your first sequence — or fill the library first."
+                  ? t("home.emptyNoneHint")
                   : scoped.length === 0
-                    ? "Drag a sequence here, or create a new one inside this folder."
-                    : "Try a different search."}
+                    ? t("home.emptyFolderHint")
+                    : t("home.emptySearchHint")}
               </p>
               <div className="mt-6 flex justify-center gap-2">
                 <Button
@@ -236,11 +237,11 @@ function Home() {
                     setShowNew(true);
                   }}
                 >
-                  New sequence
+                  {t("home.newSequence")}
                 </Button>
                 {sequences.length === 0 && (
                   <Button variant="outline" asChild>
-                    <Link to="/library">Go to library</Link>
+                    <Link to="/library">{t("home.goToLibrary")}</Link>
                   </Button>
                 )}
               </div>
@@ -280,7 +281,7 @@ function Home() {
                         <Calendar className="size-3" strokeWidth={1.5} />
                         {format(new Date(s.updated_at), "MMM d, yyyy")}
                       </span>
-                      <span>{s.pose_count} poses</span>
+                      <span>{s.pose_count} {t("common.poses")}</span>
                       <span>{formatDuration(s.total_duration_seconds)}</span>
                       {selection.kind !== "folder" && (
                         <span className="text-ink-muted">{pathLabel(s.folder_id)}</span>
@@ -295,7 +296,7 @@ function Home() {
                   <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button size="sm" variant="ghost" title="Move to folder">
+                        <Button size="sm" variant="ghost" title={t("home.moveToFolder")}>
                           <FolderInput className="size-4" strokeWidth={1.5} />
                         </Button>
                       </DropdownMenuTrigger>
@@ -322,7 +323,7 @@ function Home() {
                       size="sm"
                       variant="ghost"
                       onClick={() => dup.mutate(s.id)}
-                      title="Duplicate"
+                      title={t("common.duplicate")}
                     >
                       <Copy className="size-4" strokeWidth={1.5} />
                     </Button>
@@ -330,7 +331,7 @@ function Home() {
                       size="sm"
                       variant="ghost"
                       onClick={() => del.mutate(s.id)}
-                      title="Delete"
+                      title={t("common.delete")}
                     >
                       <Trash2 className="size-4" strokeWidth={1.5} />
                     </Button>
@@ -351,7 +352,7 @@ function Home() {
             autoFocus
             value={newTitle}
             onChange={(e) => setNewTitle(e.target.value)}
-            placeholder="Morning solar flow"
+            placeholder={t("home.titlePlaceholder")}
             onKeyDown={(e) => e.key === "Enter" && create.mutate()}
           />
           <label className="text-sm text-ink-muted">
@@ -361,7 +362,7 @@ function Home() {
               onChange={(e) => setNewFolderId(e.target.value || null)}
               className="mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-sm text-ink"
             >
-              <option value="">Main area</option>
+              <option value="">{t("home.mainArea")}</option>
               {paths.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.label}
