@@ -1,6 +1,7 @@
 import { Heart, Plus } from "lucide-react";
 import type { Pose } from "@/lib/yoga-api";
 import { PoseImage } from "./PoseImage";
+import { useT } from "@/lib/i18n";
 
 interface Props {
   pose: Pose;
@@ -36,7 +37,7 @@ export function PoseCard({ pose, onClick, onFavorite, onAdd, compact, dense }: P
                 onFavorite();
               }}
               className="absolute right-1 top-1 flex size-6 items-center justify-center rounded-full bg-background/85 backdrop-blur-sm transition-colors hover:bg-background"
-              aria-label="Favorite"
+              aria-label={t("common.favorite")}
             >
               <Heart
                 className={
@@ -55,7 +56,7 @@ export function PoseCard({ pose, onClick, onFavorite, onAdd, compact, dense }: P
                 onAdd();
               }}
               className="absolute bottom-1 right-1 flex size-7 items-center justify-center rounded-full bg-ink text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100"
-              aria-label="Add to sequence"
+              aria-label={t("common.addToSequence")}
             >
               <Plus className="size-3.5" />
             </button>
@@ -92,7 +93,7 @@ export function PoseCard({ pose, onClick, onFavorite, onAdd, compact, dense }: P
               onFavorite();
             }}
             className="absolute right-2 top-2 flex size-8 items-center justify-center rounded-full bg-background/85 backdrop-blur-sm transition-colors hover:bg-background"
-            aria-label="Favorite"
+            aria-label={t("common.favorite")}
           >
             <Heart
               className={
@@ -111,7 +112,7 @@ export function PoseCard({ pose, onClick, onFavorite, onAdd, compact, dense }: P
               onAdd();
             }}
             className="absolute bottom-2 right-2 flex size-9 items-center justify-center rounded-full bg-ink text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100"
-            aria-label="Add to sequence"
+            aria-label={t("common.addToSequence")}
           >
             <Plus className="size-4" />
           </button>

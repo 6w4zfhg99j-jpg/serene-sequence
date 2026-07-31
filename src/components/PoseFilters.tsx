@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import type { Category, Pose, Tag } from "@/lib/yoga-api";
 import { Input } from "@/components/ui/input";
 import { Heart, Search } from "lucide-react";
+import { useT } from "@/lib/i18n";
 
 interface FiltersState {
   search: string;
@@ -61,6 +62,7 @@ export function PoseFiltersPanel({
   setFilters,
   compact,
 }: PanelProps) {
+  const t = useT();
   return (
     <div className={compact ? "space-y-3" : "space-y-4"}>
       <div className="relative">
@@ -68,7 +70,7 @@ export function PoseFiltersPanel({
         <Input
           value={filters.search}
           onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-          placeholder="Search poses..."
+          placeholder={t("common.searchPoses")}
           className="pl-9"
         />
       </div>
@@ -89,12 +91,12 @@ export function PoseFiltersPanel({
             className={"size-3 " + (filters.favoritesOnly ? "fill-current" : "")}
             strokeWidth={2}
           />
-          Favorites
+          {t("common.favoritesOnly")}
         </button>
       </div>
 
       <div>
-        <p className="label-eyebrow mb-2">Categories</p>
+        <p className="label-eyebrow mb-2">{t("library.categories")}</p>
         <div className="flex flex-wrap gap-1.5">
           <button
             onClick={() => setFilters({ ...filters, categoryId: null })}
@@ -105,7 +107,7 @@ export function PoseFiltersPanel({
                 : "border-line text-ink-muted hover:border-ink-muted")
             }
           >
-            All
+            {t("common.all")}
           </button>
           {categories.map((c) => (
             <button
@@ -130,7 +132,7 @@ export function PoseFiltersPanel({
       </div>
 
       <div>
-        <p className="label-eyebrow mb-2">Tags</p>
+        <p className="label-eyebrow mb-2">{t("library.tags")}</p>
         <div className="flex flex-wrap gap-1.5">
           {tags.map((t) => {
             const on = filters.tagIds.includes(t.id);

@@ -3,6 +3,7 @@ import { ChevronRight, Heart, Search } from "lucide-react";
 import type { Category, Pose, Subcategory } from "@/lib/yoga-api";
 import { PoseImage } from "./PoseImage";
 import { Input } from "@/components/ui/input";
+import { useT } from "@/lib/i18n";
 
 const LS_KEY = "builder.categoryCollapse.v1";
 const OTHER = "__other__";
@@ -63,6 +64,8 @@ export function BuilderLibrary({ poses, categories, subcategories = [], onAdd }:
     return Array.from(map.values()).filter((g) => g.poses.length > 0);
   }, [filtered, categories]);
 
+  const t = useT();
+
   function toggle(id: string) {
     setCollapsed((c) => ({ ...c, [id]: !c[id] }));
   }
@@ -81,7 +84,7 @@ export function BuilderLibrary({ poses, categories, subcategories = [], onAdd }:
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search poses..."
+            placeholder={t("common.searchPoses")}
             className="h-8 pl-8 text-sm"
           />
         </div>
@@ -94,7 +97,7 @@ export function BuilderLibrary({ poses, categories, subcategories = [], onAdd }:
               ? "border-accent bg-accent text-accent-foreground"
               : "border-line text-ink-muted hover:border-ink-muted")
           }
-          title="Favorites only"
+          title={t("common.favoritesOnly")}
         >
           <Heart className={"size-3 " + (favOnly ? "fill-current" : "")} strokeWidth={2} />
         </button>
@@ -102,12 +105,12 @@ export function BuilderLibrary({ poses, categories, subcategories = [], onAdd }:
 
       <div className="-mr-1 flex-1 overflow-y-auto pr-1">
         {grouped.length === 0 && (
-          <p className="p-4 text-center text-xs text-ink-subtle">No poses match.</p>
+          <p className="p-4 text-center text-xs text-ink-subtle">{t("library.noMatchTitle")}</p>
         )}
         {grouped.map((g) => {
           const id = g.cat?.id ?? OTHER;
           const isCollapsed = !!collapsed[id];
-          const label = g.cat?.name ?? "Other";
+          const label = g.cat?.name ?? t("common.other");
           const subs = subcategories
             .filter((s) => s.category_id === id)
             .sort((a, b) => a.sort_order - b.sort_order);
@@ -144,7 +147,7 @@ export function BuilderLibrary({ poses, categories, subcategories = [], onAdd }:
                         : "border-line text-ink-muted hover:border-ink-muted")
                     }
                   >
-                    All
+                    {t("common.all")}
                   </button>
                   {subs.map((s) => (
                     <button
@@ -176,7 +179,7 @@ export function BuilderLibrary({ poses, categories, subcategories = [], onAdd }:
                         "group flex items-center gap-2 overflow-hidden rounded-md border border-line bg-background p-1.5 text-left transition-all hover:border-ink-subtle hover:shadow-sm active:scale-[0.98] " +
                         (pulsed === p.id ? "ring-2 ring-accent" : "")
                       }
-                      title="Click to add"
+                      title={t("common.clickToAdd")}
                     >
                       <PoseImage
                         path={p.image_url}
