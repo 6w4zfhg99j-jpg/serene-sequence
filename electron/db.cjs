@@ -192,6 +192,8 @@ function poseRow(row) {
     image_url: row.image_url,
     is_favorite: unbool(row.is_favorite),
     subcategory_id: row.subcategory_id ?? null,
+    subcategory_ids: [],
+    sort_order: row.sort_order ?? 0,
     created_at: row.created_at,
     updated_at: row.updated_at,
     categories: [],
