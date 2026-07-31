@@ -1,13 +1,29 @@
 // electron/main.cjs — Electron main process
-const { app, BrowserWindow, protocol, ipcMain } = require("electron");
+const { app, BrowserWindow, protocol, ipcMain, dialog, net } = require("electron");
 const path = require("path");
 const fs = require("fs");
-const url = require("url");
+const { pathToFileURL } = require("url");
 
 const db = require("./db.cjs");
 const images = require("./images.cjs");
 
 const isDev = !!process.env.ELECTRON_START_URL;
+
+// The renderer is a static SPA built into dist/client. It references its assets
+// with absolute paths ("/assets/..."), which cannot resolve over file://.
+// We therefore serve it from a custom "app://" scheme with an SPA fallback.
+const CLIENT_DIR = path.join(__dirname, "..", "dist", "client");
+
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: "app",
+    privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true },
+  },
+  {
+    scheme: "local",
+    privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true },
+  },
+]);
 
 function ensureDirs() {
   const dir = path.join(app.getPath("userData"), "asana");
@@ -31,61 +47,100 @@ function createWindow() {
   if (isDev) {
     win.loadURL(process.env.ELECTRON_START_URL);
   } else {
-    const indexHtml = path.join(__dirname, "..", "dist", "client", "index.html");
-    win.loadURL(
-      url.format({ pathname: indexHtml, protocol: "file:", slashes: true }),
-    );
+    win.loadURL("app://asana/");
   }
+}
+
+function serveClient(imgDir) {
+  // app:// — the built SPA, with a fallback to index.html for client routes.
+  protocol.handle("app", async (request) => {
+    const { pathname } = new URL(request.url);
+    const rel = decodeURIComponent(pathname).replace(/^\/+/, "");
+    let file = path.join(CLIENT_DIR, rel);
+    if (!file.startsWith(CLIENT_DIR) || !rel || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
+      file = path.join(CLIENT_DIR, "index.html");
+    }
+    return net.fetch(pathToFileURL(file).toString());
+  });
+
+  // local:// — user photos stored in the app data folder.
+  protocol.handle("local", async (request) => {
+    const { hostname, pathname } = new URL(request.url);
+    const rel = decodeURIComponent(hostname + pathname).replace(/^\/+/, "");
+    const file = path.join(imgDir, rel);
+    if (!file.startsWith(imgDir) || !fs.existsSync(file)) {
+      return new Response("Not found", { status: 404 });
+    }
+    return net.fetch(pathToFileURL(file).toString());
+  });
 }
 
 app.whenReady().then(() => {
   const { dir, imgDir } = ensureDirs();
-  db.init(path.join(dir, "asana.db"));
-  images.init(imgDir);
 
-  // Serve local://<file> from the images directory.
-  protocol.registerFileProtocol("local", (request, callback) => {
-    const rel = decodeURIComponent(request.url.replace(/^local:\/\//, ""));
-    callback({ path: path.join(imgDir, rel) });
-  });
+  try {
+    db.init(path.join(dir, "asana.db"));
+    images.init(imgDir);
+  } catch (err) {
+    dialog.showErrorBox(
+      "Asana could not start",
+      `The local database failed to open.\n\n${err && err.stack ? err.stack : String(err)}`,
+    );
+    app.quit();
+    return;
+  }
+
+  serveClient(imgDir);
 
   // ---------- IPC handlers ----------
-  ipcMain.handle("poses.list", () => db.listPoses());
-  ipcMain.handle("poses.upsert", (_e, input) => db.upsertPose(input));
-  ipcMain.handle("poses.toggleFavorite", (_e, id, next) => db.toggleFavorite(id, next));
-  ipcMain.handle("poses.remove", (_e, id) => db.removePose(id));
+  // Wrap every handler so a failure surfaces in the renderer instead of
+  // silently resolving to undefined.
+  const handle = (channel, fn) => {
+    ipcMain.handle(channel, async (event, ...args) => {
+      try {
+        return await fn(event, ...args);
+      } catch (err) {
+        console.error(`[ipc] ${channel} failed:`, err);
+        throw err;
+      }
+    });
+  };
 
-  ipcMain.handle("categories.list", () => db.listCategories());
-  ipcMain.handle("categories.create", (_e, name) => db.createCategory(name));
-  ipcMain.handle("categories.update", (_e, id, name) => db.updateCategory(id, name));
-  ipcMain.handle("categories.remove", (_e, id) => db.deleteCategory(id));
-  ipcMain.handle("categories.reorder", (_e, ids) => db.reorderCategories(ids));
+  handle("poses.list", () => db.listPoses());
+  handle("poses.upsert", (_e, input) => db.upsertPose(input));
+  handle("poses.toggleFavorite", (_e, id, next) => db.toggleFavorite(id, next));
+  handle("poses.remove", (_e, id) => db.removePose(id));
 
-  ipcMain.handle("tags.list", () => db.listTags());
-  ipcMain.handle("tags.create", (_e, name) => db.createTag(name));
-  ipcMain.handle("tags.update", (_e, id, name) => db.updateTag(id, name));
-  ipcMain.handle("tags.merge", (_e, sourceId, targetId) => db.mergeTags(sourceId, targetId));
-  ipcMain.handle("tags.remove", (_e, id) => db.deleteTag(id));
+  handle("categories.list", () => db.listCategories());
+  handle("categories.create", (_e, name) => db.createCategory(name));
+  handle("categories.update", (_e, id, name) => db.updateCategory(id, name));
+  handle("categories.remove", (_e, id) => db.deleteCategory(id));
+  handle("categories.reorder", (_e, ids) => db.reorderCategories(ids));
 
+  handle("tags.list", () => db.listTags());
+  handle("tags.create", (_e, name) => db.createTag(name));
+  handle("tags.update", (_e, id, name) => db.updateTag(id, name));
+  handle("tags.merge", (_e, sourceId, targetId) => db.mergeTags(sourceId, targetId));
+  handle("tags.remove", (_e, id) => db.deleteTag(id));
 
-  ipcMain.handle("sequences.list", () => db.listSequences());
-  ipcMain.handle("sequences.get", (_e, id) => db.getSequence(id));
-  ipcMain.handle("sequences.create", (_e, input) => db.createSequence(input));
-  ipcMain.handle("sequences.update", (_e, id, patch) => db.updateSequence(id, patch));
-  ipcMain.handle("sequences.setTags", (_e, id, tagIds) => db.setSequenceTags(id, tagIds));
-  ipcMain.handle("sequences.remove", (_e, id) => db.deleteSequence(id));
-  ipcMain.handle("sequences.duplicate", (_e, id) => db.duplicateSequence(id));
-  ipcMain.handle("sequences.addPose", (_e, sid, pid) => db.addPoseToSequence(sid, pid));
-  ipcMain.handle("sequences.removeItem", (_e, itemId) => db.removeSequenceItem(itemId));
-  ipcMain.handle("sequences.duplicateItem", (_e, item) => db.duplicateSequenceItem(item));
-  ipcMain.handle("sequences.updateItem", (_e, itemId, patch) =>
+  handle("sequences.list", () => db.listSequences());
+  handle("sequences.get", (_e, id) => db.getSequence(id));
+  handle("sequences.create", (_e, input) => db.createSequence(input));
+  handle("sequences.update", (_e, id, patch) => db.updateSequence(id, patch));
+  handle("sequences.setTags", (_e, id, tagIds) => db.setSequenceTags(id, tagIds));
+  handle("sequences.remove", (_e, id) => db.deleteSequence(id));
+  handle("sequences.duplicate", (_e, id) => db.duplicateSequence(id));
+  handle("sequences.addPose", (_e, sid, pid) => db.addPoseToSequence(sid, pid));
+  handle("sequences.removeItem", (_e, itemId) => db.removeSequenceItem(itemId));
+  handle("sequences.duplicateItem", (_e, item) => db.duplicateSequenceItem(item));
+  handle("sequences.updateItem", (_e, itemId, patch) =>
     db.updateSequenceItem(itemId, patch),
   );
-  ipcMain.handle("sequences.reorder", (_e, sid, orderedIds) =>
+  handle("sequences.reorder", (_e, sid, orderedIds) =>
     db.reorderSequenceItems(sid, orderedIds),
   );
 
-  ipcMain.handle("images.importBase64", (_e, name, base64) =>
+  handle("images.importBase64", (_e, name, base64) =>
     images.importBase64(name, base64),
   );
 
