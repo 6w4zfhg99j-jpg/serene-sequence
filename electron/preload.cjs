@@ -12,11 +12,19 @@ contextBridge.exposeInMainWorld("yoga", {
   },
   categories: {
     list: () => invoke("categories.list"),
+    create: (name) => invoke("categories.create", name),
+    update: (id, name) => invoke("categories.update", id, name),
+    remove: (id) => invoke("categories.remove", id),
+    reorder: (ids) => invoke("categories.reorder", ids),
   },
   tags: {
     list: () => invoke("tags.list"),
     create: (name) => invoke("tags.create", name),
+    update: (id, name) => invoke("tags.update", id, name),
+    merge: (sourceId, targetId) => invoke("tags.merge", sourceId, targetId),
+    remove: (id) => invoke("tags.remove", id),
   },
+
   sequences: {
     list: () => invoke("sequences.list"),
     get: (id) => invoke("sequences.get", id),
