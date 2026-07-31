@@ -31,7 +31,7 @@ function createWindow() {
   if (isDev) {
     win.loadURL(process.env.ELECTRON_START_URL);
   } else {
-    const indexHtml = path.join(__dirname, "..", "dist", "index.html");
+    const indexHtml = path.join(__dirname, "..", "dist", "client", "index.html");
     win.loadURL(
       url.format({ pathname: indexHtml, protocol: "file:", slashes: true }),
     );
