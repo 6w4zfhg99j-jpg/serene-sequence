@@ -64,14 +64,26 @@ function serveClient(imgDir) {
   });
 
   // local:// — user photos stored in the app data folder.
+  // URLs look like "local://<uuid>.jpg". Because "local" is registered as a
+  // standard scheme, the filename lands in the hostname and pathname is "/",
+  // so we join both and strip any surrounding slashes before resolving.
   protocol.handle("local", async (request) => {
-    const { hostname, pathname } = new URL(request.url);
-    const rel = decodeURIComponent(hostname + pathname).replace(/^\/+/, "");
-    const file = path.join(imgDir, rel);
-    if (!file.startsWith(imgDir) || !fs.existsSync(file)) {
-      return new Response("Not found", { status: 404 });
+    try {
+      const { hostname, pathname } = new URL(request.url);
+      const rel = decodeURIComponent(`${hostname}${pathname}`)
+        .replace(/^\/+/, "")
+        .replace(/\/+$/, "");
+      const name = path.basename(rel);
+      const file = path.join(imgDir, name);
+      if (!name || !file.startsWith(imgDir) || !fs.existsSync(file)) {
+        console.error("[local] not found:", request.url, "->", file);
+        return new Response("Not found", { status: 404 });
+      }
+      return net.fetch(pathToFileURL(file).toString());
+    } catch (err) {
+      console.error("[local] failed:", request.url, err);
+      return new Response("Error", { status: 500 });
     }
-    return net.fetch(pathToFileURL(file).toString());
   });
 }
 
