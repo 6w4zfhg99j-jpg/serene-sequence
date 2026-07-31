@@ -8,11 +8,15 @@ export interface Category {
   id: string;
   name: string;
   sort_order: number;
+  pose_count?: number;
 }
 export interface Tag {
   id: string;
   name: string;
+  pose_count?: number;
+  sequence_count?: number;
 }
+
 export interface Pose {
   id: string;
   name: string;
