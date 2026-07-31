@@ -32,6 +32,8 @@ import {
 } from "@/lib/yoga-api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { LanguageSettings } from "@/components/LanguageSettings";
+import { useT } from "@/lib/i18n";
 
 export const Route = createFileRoute("/manage")({
   head: () => ({
@@ -55,16 +57,21 @@ export const Route = createFileRoute("/manage")({
 });
 
 function ManagePage() {
+  const t = useT();
   return (
     <div className="mx-auto max-w-5xl px-6 py-10">
       <header className="mb-8">
-        <p className="label-eyebrow">Settings</p>
-        <h1 className="mt-1 font-serif text-4xl">Categories &amp; hashtags</h1>
+        <p className="label-eyebrow">{t("settings.eyebrow")}</p>
+        <h1 className="mt-1 font-serif text-4xl">{t("settings.title")}</h1>
         <p className="mt-2 max-w-xl text-sm text-ink-muted">
           Everything here is editable — changes apply everywhere the category or
           hashtag is used. Expand a category to manage its subcategories.
         </p>
       </header>
+
+      <div className="mb-10 max-w-md">
+        <LanguageSettings />
+      </div>
 
       <div className="grid gap-10 lg:grid-cols-2">
         <CategoriesPanel />
