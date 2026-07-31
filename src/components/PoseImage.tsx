@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { ImageIcon } from "lucide-react";
 import { resolveImage, useSignedImages } from "@/hooks/use-signed-images";
 
@@ -10,8 +11,20 @@ interface Props {
 export function PoseImage({ path, alt, className }: Props) {
   const { data } = useSignedImages([path]);
   const url = resolveImage(path, data);
-  if (url) {
-    return <img src={url} alt={alt} className={className} loading="lazy" />;
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => setFailed(false), [url]);
+
+  if (url && !failed) {
+    return (
+      <img
+        src={url}
+        alt={alt}
+        className={className}
+        loading="lazy"
+        onError={() => setFailed(true)}
+      />
+    );
   }
   return (
     <div
