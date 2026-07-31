@@ -19,7 +19,9 @@ export default defineConfig({
       ? { spa: { enabled: true, prerender: { outputPath: "/index.html" } } }
       : {}),
   },
-  // Relative base so the Electron shell can load built assets via file://
+  // The Electron shell serves dist/client over a custom app:// scheme, so it
+  // uses absolute asset paths (file:// cannot resolve them).
   ...(isElectron ? { nitro: false as const } : {}),
-  vite: { base: "./" },
+  vite: { base: isElectron ? "/" : "./" },
 });
+
