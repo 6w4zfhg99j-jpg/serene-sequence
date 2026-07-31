@@ -108,6 +108,13 @@ export function BuilderLibrary({ poses, categories, subcategories = [], onAdd }:
           const id = g.cat?.id ?? OTHER;
           const isCollapsed = !!collapsed[id];
           const label = g.cat?.name ?? "Other";
+          const subs = subcategories
+            .filter((s) => s.category_id === id)
+            .sort((a, b) => a.sort_order - b.sort_order);
+          const sel = activeSub[id] ?? null;
+          const visiblePoses = sel
+            ? g.poses.filter((p) => p.subcategory_id === sel)
+            : g.poses;
           return (
             <div key={id} className="mb-1">
               <button
@@ -123,11 +130,44 @@ export function BuilderLibrary({ poses, categories, subcategories = [], onAdd }:
                   strokeWidth={2}
                 />
                 <span className="text-sm font-medium">{label}</span>
-                <span className="text-xs text-ink-subtle">{g.poses.length}</span>
+                <span className="text-xs text-ink-subtle">{visiblePoses.length}</span>
               </button>
+              {!isCollapsed && subs.length > 0 && (
+                <div className="mt-1 flex flex-wrap gap-1 pl-6">
+                  <button
+                    type="button"
+                    onClick={() => setActiveSub((m) => ({ ...m, [id]: null }))}
+                    className={
+                      "rounded-full border px-2 py-0.5 text-[11px] transition-colors " +
+                      (sel === null
+                        ? "border-ink bg-ink text-background"
+                        : "border-line text-ink-muted hover:border-ink-muted")
+                    }
+                  >
+                    All
+                  </button>
+                  {subs.map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() =>
+                        setActiveSub((m) => ({ ...m, [id]: sel === s.id ? null : s.id }))
+                      }
+                      className={
+                        "rounded-full border px-2 py-0.5 text-[11px] transition-colors " +
+                        (sel === s.id
+                          ? "border-ink bg-ink text-background"
+                          : "border-line text-ink-muted hover:border-ink-muted")
+                      }
+                    >
+                      {s.name}
+                    </button>
+                  ))}
+                </div>
+              )}
               {!isCollapsed && (
                 <div className="mb-2 mt-1 grid grid-cols-2 gap-1.5 pl-2">
-                  {g.poses.map((p) => (
+                  {visiblePoses.map((p) => (
                     <button
                       key={id + "-" + p.id}
                       type="button"
