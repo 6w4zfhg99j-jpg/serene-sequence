@@ -286,6 +286,30 @@ function LibraryPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["poses"] }),
   });
 
+  const reorder = useMutation({
+    mutationFn: (orderedIds: string[]) => reorderPoses(orderedIds),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["poses"] }),
+  });
+
+  /**
+   * Moves the dragged pose to the target pose's slot in the global library
+   * order, then writes the whole order back so it survives reloads.
+   */
+  function handleReorder(activeId: string, overId: string) {
+    const ids = poses.map((p) => p.id);
+    const from = ids.indexOf(activeId);
+    const to = ids.indexOf(overId);
+    if (from === -1 || to === -1) return;
+    ids.splice(to, 0, ids.splice(from, 1)[0]);
+    const byId = new Map(poses.map((p) => [p.id, p]));
+    // Optimistic: reflect the new order instantly.
+    qc.setQueryData<Pose[]>(
+      ["poses"],
+      ids.map((id, i) => ({ ...byId.get(id)!, sort_order: i })),
+    );
+    reorder.mutate(ids);
+  }
+
   return (
     <div className="mx-auto max-w-7xl px-6 py-10">
       <header className="mb-8 flex items-end justify-between gap-4">
