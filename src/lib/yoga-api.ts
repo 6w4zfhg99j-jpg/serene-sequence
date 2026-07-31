@@ -23,6 +23,13 @@ export interface Tag {
   pose_count?: number;
   sequence_count?: number;
 }
+export interface Folder {
+  id: string;
+  name: string;
+  parent_id: string | null;
+  sort_order: number;
+  sequence_count?: number;
+}
 
 export interface Pose {
   id: string;
