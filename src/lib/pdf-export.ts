@@ -1,26 +1,103 @@
 import { jsPDF } from "jspdf";
 import { getSignedImageUrls, formatDuration, type Sequence } from "@/lib/yoga-api";
 
-async function loadImageAsDataUrl(url: string): Promise<{ dataUrl: string; w: number; h: number } | null> {
+/** Paths that the browser/Electron renderer can load directly. */
+function isDirectUrl(p: string): boolean {
+  return (
+    p.startsWith("http") ||
+    p.startsWith("data:") ||
+    p.startsWith("blob:") ||
+    p.startsWith("local://") ||
+    p.startsWith("file://")
+  );
+}
+
+/** Only storage keys (non-direct paths) need signing. */
+export async function resolveExportUrls(paths: (string | null | undefined)[]) {
+  const keys = paths.filter((p): p is string => !!p && !isDirectUrl(p));
+  const signed = keys.length ? await getSignedImageUrls(keys) : {};
+  return (path: string | null | undefined): string | null => {
+    if (!path) return null;
+    if (isDirectUrl(path)) return path;
+    return signed[path] ?? null;
+  };
+}
+
+type LoadedImage = { dataUrl: string; format: "PNG" | "JPEG"; w: number; h: number };
+
+const imageCache = new Map<string, LoadedImage | null>();
+
+function decode(src: string): Promise<HTMLImageElement | null> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+}
+
+/**
+ * Loads an image (http, data:, or Electron local://) and re-encodes it through
+ * a canvas to PNG so jsPDF always receives a format it can embed. Awaiting the
+ * decode guarantees the bitmap is ready before it is drawn into the PDF.
+ */
+async function loadImageAsDataUrl(url: string): Promise<LoadedImage | null> {
+  if (imageCache.has(url)) return imageCache.get(url) ?? null;
+  let result: LoadedImage | null = null;
   try {
-    const res = await fetch(url);
-    const blob = await res.blob();
-    const dataUrl: string = await new Promise((resolve, reject) => {
-      const fr = new FileReader();
-      fr.onload = () => resolve(fr.result as string);
-      fr.onerror = reject;
-      fr.readAsDataURL(blob);
-    });
-    const dims: { w: number; h: number } = await new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => resolve({ w: img.width, h: img.height });
-      img.onerror = () => resolve({ w: 1, h: 1 });
-      img.src = dataUrl;
-    });
-    return { dataUrl, w: dims.w, h: dims.h };
+    let src = url;
+    if (!url.startsWith("data:")) {
+      // fetch() works for http and for the privileged local:// scheme
+      // (registered with supportFetchAPI) and sidesteps canvas tainting.
+      try {
+        const res = await fetch(url);
+        if (res.ok) {
+          const blob = await res.blob();
+          src = await new Promise<string>((resolve, reject) => {
+            const fr = new FileReader();
+            fr.onload = () => resolve(fr.result as string);
+            fr.onerror = reject;
+            fr.readAsDataURL(blob);
+          });
+        }
+      } catch {
+        // fall back to loading the URL directly in an <img>
+      }
+    }
+    const img = await decode(src);
+    if (img && img.naturalWidth > 0) {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.drawImage(img, 0, 0);
+        try {
+          result = {
+            dataUrl: canvas.toDataURL("image/png"),
+            format: "PNG",
+            w: img.naturalWidth,
+            h: img.naturalHeight,
+          };
+        } catch {
+          // tainted canvas — use the source data directly if it is a data URL
+          if (src.startsWith("data:")) {
+            result = {
+              dataUrl: src,
+              format: src.startsWith("data:image/png") ? "PNG" : "JPEG",
+              w: img.naturalWidth,
+              h: img.naturalHeight,
+            };
+          }
+        }
+      }
+    }
   } catch {
-    return null;
+    result = null;
   }
+  imageCache.set(url, result);
+  return result;
 }
 
 export type PdfLayout = "list" | "grid";
@@ -40,11 +117,18 @@ export async function exportSequencePdf(
   const ink = "#2a2620";
   const muted = "#6b665e";
 
-  // Signed URLs
-  const paths = seq.items
-    .map((it) => it.pose.image_url)
-    .filter((p): p is string => !!p && !p.startsWith("http"));
-  const signed = await getSignedImageUrls(paths);
+  // Resolve every image URL, then fully preload the bitmaps before drawing.
+  const resolve = await resolveExportUrls(seq.items.map((it) => it.pose.image_url));
+  const loaded = new Map<string, LoadedImage | null>();
+  await Promise.all(
+    Array.from(
+      new Set(
+        seq.items
+          .map((it) => resolve(it.pose.image_url))
+          .filter((u): u is string => !!u)
+      )
+    ).map(async (u) => loaded.set(u, await loadImageAsDataUrl(u)))
+  );
 
   // Header
   doc.setTextColor(ink);
@@ -97,15 +181,10 @@ export async function exportSequencePdf(
     doc.text(String(i + 1).padStart(2, "0"), margin, y + 8);
 
     // Image
-    const path = it.pose.image_url;
-    const url = path
-      ? path.startsWith("http")
-        ? path
-        : signed[path]
-      : null;
+    const url = resolve(it.pose.image_url);
     const x = margin + 12;
     if (url) {
-      const img = await loadImageAsDataUrl(url);
+      const img = loaded.get(url) ?? null;
       if (img) {
         const ratio = img.w / img.h;
         let w = imgSize;
@@ -115,13 +194,15 @@ export async function exportSequencePdf(
         try {
           doc.addImage(
             img.dataUrl,
-            "JPEG",
+            img.format,
             x + (imgSize - w) / 2,
             y + (imgSize - h) / 2,
             w,
             h
           );
-        } catch {}
+        } catch (err) {
+          console.error("[pdf] failed to embed image", url, err);
+        }
       }
     }
     doc.setDrawColor(230, 226, 218);
@@ -181,10 +262,17 @@ export async function exportSequenceGridPdf(seq: Sequence) {
   const ink = "#2a2620";
   const muted = "#6b665e";
 
-  const paths = seq.items
-    .map((it) => it.pose.image_url)
-    .filter((p): p is string => !!p && !p.startsWith("http"));
-  const signed = await getSignedImageUrls(paths);
+  const resolve = await resolveExportUrls(seq.items.map((it) => it.pose.image_url));
+  const loaded = new Map<string, LoadedImage | null>();
+  await Promise.all(
+    Array.from(
+      new Set(
+        seq.items
+          .map((it) => resolve(it.pose.image_url))
+          .filter((u): u is string => !!u)
+      )
+    ).map(async (u) => loaded.set(u, await loadImageAsDataUrl(u)))
+  );
 
   // Grid metrics
   const cols = 5;
@@ -255,10 +343,9 @@ export async function exportSequenceGridPdf(seq: Sequence) {
     doc.setFillColor(250, 249, 246);
     doc.rect(x, y, cardW, imgH, "FD");
 
-    const path = it.pose.image_url;
-    const url = path ? (path.startsWith("http") ? path : signed[path]) : null;
+    const url = resolve(it.pose.image_url);
     if (url) {
-      const img = await loadImageAsDataUrl(url);
+      const img = loaded.get(url) ?? null;
       if (img) {
         const ratio = img.w / img.h;
         const pad = 1.5;
@@ -273,13 +360,15 @@ export async function exportSequenceGridPdf(seq: Sequence) {
         try {
           doc.addImage(
             img.dataUrl,
-            "JPEG",
+            img.format,
             x + (cardW - w) / 2,
             y + (imgH - h) / 2,
             w,
             h
           );
-        } catch {}
+        } catch (err) {
+          console.error("[pdf] failed to embed image", url, err);
+        }
       }
     }
 
