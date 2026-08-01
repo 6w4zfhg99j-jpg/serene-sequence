@@ -262,10 +262,17 @@ export async function exportSequenceGridPdf(seq: Sequence) {
   const ink = "#2a2620";
   const muted = "#6b665e";
 
-  const paths = seq.items
-    .map((it) => it.pose.image_url)
-    .filter((p): p is string => !!p && !p.startsWith("http"));
-  const signed = await getSignedImageUrls(paths);
+  const resolve = await resolveExportUrls(seq.items.map((it) => it.pose.image_url));
+  const loaded = new Map<string, LoadedImage | null>();
+  await Promise.all(
+    Array.from(
+      new Set(
+        seq.items
+          .map((it) => resolve(it.pose.image_url))
+          .filter((u): u is string => !!u)
+      )
+    ).map(async (u) => loaded.set(u, await loadImageAsDataUrl(u)))
+  );
 
   // Grid metrics
   const cols = 5;
