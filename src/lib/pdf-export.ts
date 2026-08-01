@@ -181,15 +181,10 @@ export async function exportSequencePdf(
     doc.text(String(i + 1).padStart(2, "0"), margin, y + 8);
 
     // Image
-    const path = it.pose.image_url;
-    const url = path
-      ? path.startsWith("http")
-        ? path
-        : signed[path]
-      : null;
+    const url = resolve(it.pose.image_url);
     const x = margin + 12;
     if (url) {
-      const img = await loadImageAsDataUrl(url);
+      const img = loaded.get(url) ?? null;
       if (img) {
         const ratio = img.w / img.h;
         let w = imgSize;
@@ -199,13 +194,15 @@ export async function exportSequencePdf(
         try {
           doc.addImage(
             img.dataUrl,
-            "JPEG",
+            img.format,
             x + (imgSize - w) / 2,
             y + (imgSize - h) / 2,
             w,
             h
           );
-        } catch {}
+        } catch (err) {
+          console.error("[pdf] failed to embed image", url, err);
+        }
       }
     }
     doc.setDrawColor(230, 226, 218);
