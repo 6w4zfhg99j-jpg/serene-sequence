@@ -117,11 +117,18 @@ export async function exportSequencePdf(
   const ink = "#2a2620";
   const muted = "#6b665e";
 
-  // Signed URLs
-  const paths = seq.items
-    .map((it) => it.pose.image_url)
-    .filter((p): p is string => !!p && !p.startsWith("http"));
-  const signed = await getSignedImageUrls(paths);
+  // Resolve every image URL, then fully preload the bitmaps before drawing.
+  const resolve = await resolveExportUrls(seq.items.map((it) => it.pose.image_url));
+  const loaded = new Map<string, LoadedImage | null>();
+  await Promise.all(
+    Array.from(
+      new Set(
+        seq.items
+          .map((it) => resolve(it.pose.image_url))
+          .filter((u): u is string => !!u)
+      )
+    ).map(async (u) => loaded.set(u, await loadImageAsDataUrl(u)))
+  );
 
   // Header
   doc.setTextColor(ink);
