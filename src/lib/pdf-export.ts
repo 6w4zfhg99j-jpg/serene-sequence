@@ -343,10 +343,9 @@ export async function exportSequenceGridPdf(seq: Sequence) {
     doc.setFillColor(250, 249, 246);
     doc.rect(x, y, cardW, imgH, "FD");
 
-    const path = it.pose.image_url;
-    const url = path ? (path.startsWith("http") ? path : signed[path]) : null;
+    const url = resolve(it.pose.image_url);
     if (url) {
-      const img = await loadImageAsDataUrl(url);
+      const img = loaded.get(url) ?? null;
       if (img) {
         const ratio = img.w / img.h;
         const pad = 1.5;
@@ -361,13 +360,15 @@ export async function exportSequenceGridPdf(seq: Sequence) {
         try {
           doc.addImage(
             img.dataUrl,
-            "JPEG",
+            img.format,
             x + (cardW - w) / 2,
             y + (imgH - h) / 2,
             w,
             h
           );
-        } catch {}
+        } catch (err) {
+          console.error("[pdf] failed to embed image", url, err);
+        }
       }
     }
 
