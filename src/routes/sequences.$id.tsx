@@ -590,7 +590,13 @@ function SequenceRow({
               {item.pose.sanskrit_name}
             </p>
           )}
+          {item.notes && (
+            <p className="mt-0.5 whitespace-pre-line text-[11px] leading-snug text-ink-subtle">
+              {item.notes}
+            </p>
+          )}
         </div>
+
         <button
           onClick={() => setOpenNotes((v) => !v)}
           className="rounded px-2 py-1 text-xs text-ink-muted hover:bg-surface hover:text-ink"
