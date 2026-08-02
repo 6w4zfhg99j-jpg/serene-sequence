@@ -1,7 +1,7 @@
 import type { Dict } from "./en";
 
 export const it: Dict = {
-  "nav.tagline": "Studio Personale",
+  "nav.tagline": "Sequence Designer",
   "nav.createSequence": "Crea Sequenza",
   "nav.poseLibrary": "Libreria Posizioni",
   "nav.savedSequences": "Sequenze Salvate",
@@ -78,6 +78,8 @@ export const it: Dict = {
   "builder.libraryPanel": "Libreria",
   "builder.sequencePanel": "Sequenza",
   "sequence.descriptionPlaceholder": "Descrivi l'intenzione di questa sequenza...",
+  "sequence.practiceNotes": "Note della pratica",
+  "sequence.practiceNotesPlaceholder": "Intenzione, indicazioni sul respiro, promemoria, modifiche...",
   "sequence.notesPlaceholder": "Indicazioni su respiro, allineamento, variazioni...",
   "sequence.side": "Lato",
   "sequence.sideBoth": "Entrambi / N/D",

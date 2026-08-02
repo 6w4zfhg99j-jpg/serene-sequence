@@ -1,0 +1,1 @@
+ALTER TABLE public.sequences ADD COLUMN IF NOT EXISTS practice_notes TEXT;

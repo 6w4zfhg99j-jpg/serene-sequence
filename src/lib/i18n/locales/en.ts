@@ -4,7 +4,7 @@
  */
 export const en = {
   // Brand / navigation
-  "nav.tagline": "Personal Studio",
+  "nav.tagline": "Sequence Designer",
   "nav.createSequence": "Create Sequence",
   "nav.poseLibrary": "Pose Library",
   "nav.savedSequences": "Saved Sequences",
@@ -84,6 +84,8 @@ export const en = {
   "builder.libraryPanel": "Library",
   "builder.sequencePanel": "Sequence",
   "sequence.descriptionPlaceholder": "Describe the intention of this sequence...",
+  "sequence.practiceNotes": "Practice Notes",
+  "sequence.practiceNotesPlaceholder": "Intention, breathing cues, teaching reminders, modifications...",
   "sequence.notesPlaceholder": "Cue the breath, alignment, a variation...",
   "sequence.side": "Side",
   "sequence.sideBoth": "Both / N/A",

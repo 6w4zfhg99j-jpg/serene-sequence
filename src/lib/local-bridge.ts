@@ -71,6 +71,7 @@ export interface LocalBridge {
     create(input: {
       title: string;
       description?: string;
+      practice_notes?: string | null;
       level?: Level;
       folder_id?: string | null;
     }): Promise<string>;
@@ -79,6 +80,7 @@ export interface LocalBridge {
       patch: {
         title?: string;
         description?: string | null;
+        practice_notes?: string | null;
         level?: Level;
         folder_id?: string | null;
       },

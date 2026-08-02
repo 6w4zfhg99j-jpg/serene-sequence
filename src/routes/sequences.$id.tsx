@@ -228,6 +228,22 @@ function SequenceEditor() {
             rows={2}
             className="mt-1 border-none bg-transparent px-0 text-sm text-ink-muted shadow-none focus-visible:ring-0"
           />
+          <div className="mt-3 max-w-2xl rounded-lg border border-line bg-surface/50 p-3">
+            <div className="label-eyebrow mb-1">{t("sequence.practiceNotes")}</div>
+            <Textarea
+              value={seq.practice_notes ?? ""}
+              onChange={(e) =>
+                qc.setQueryData(["sequence", id], {
+                  ...seq,
+                  practice_notes: e.target.value,
+                })
+              }
+              onBlur={(e) => patch.mutate({ practice_notes: e.target.value || null })}
+              placeholder={t("sequence.practiceNotesPlaceholder")}
+              rows={3}
+              className="border-none bg-transparent px-0 text-sm shadow-none focus-visible:ring-0"
+            />
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={() => setShowExport(true)}>
