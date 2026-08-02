@@ -9,12 +9,18 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SavedRouteImport } from './routes/saved'
 import { Route as ManageRouteImport } from './routes/manage'
 import { Route as LibraryRouteImport } from './routes/library'
 import { Route as BuilderRouteImport } from './routes/builder'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SequencesIdRouteImport } from './routes/sequences.$id'
 
+const SavedRoute = SavedRouteImport.update({
+  id: '/saved',
+  path: '/saved',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ManageRoute = ManageRouteImport.update({
   id: '/manage',
   path: '/manage',
@@ -46,6 +52,7 @@ export interface FileRoutesByFullPath {
   '/builder': typeof BuilderRoute
   '/library': typeof LibraryRoute
   '/manage': typeof ManageRoute
+  '/saved': typeof SavedRoute
   '/sequences/$id': typeof SequencesIdRoute
 }
 export interface FileRoutesByTo {
@@ -53,6 +60,7 @@ export interface FileRoutesByTo {
   '/builder': typeof BuilderRoute
   '/library': typeof LibraryRoute
   '/manage': typeof ManageRoute
+  '/saved': typeof SavedRoute
   '/sequences/$id': typeof SequencesIdRoute
 }
 export interface FileRoutesById {
@@ -61,14 +69,28 @@ export interface FileRoutesById {
   '/builder': typeof BuilderRoute
   '/library': typeof LibraryRoute
   '/manage': typeof ManageRoute
+  '/saved': typeof SavedRoute
   '/sequences/$id': typeof SequencesIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/builder' | '/library' | '/manage' | '/sequences/$id'
+  fullPaths:
+    | '/'
+    | '/builder'
+    | '/library'
+    | '/manage'
+    | '/saved'
+    | '/sequences/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/builder' | '/library' | '/manage' | '/sequences/$id'
-  id: '__root__' | '/' | '/builder' | '/library' | '/manage' | '/sequences/$id'
+  to: '/' | '/builder' | '/library' | '/manage' | '/saved' | '/sequences/$id'
+  id:
+    | '__root__'
+    | '/'
+    | '/builder'
+    | '/library'
+    | '/manage'
+    | '/saved'
+    | '/sequences/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -76,11 +98,19 @@ export interface RootRouteChildren {
   BuilderRoute: typeof BuilderRoute
   LibraryRoute: typeof LibraryRoute
   ManageRoute: typeof ManageRoute
+  SavedRoute: typeof SavedRoute
   SequencesIdRoute: typeof SequencesIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/saved': {
+      id: '/saved'
+      path: '/saved'
+      fullPath: '/saved'
+      preLoaderRoute: typeof SavedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/manage': {
       id: '/manage'
       path: '/manage'
@@ -124,8 +154,19 @@ const rootRouteChildren: RootRouteChildren = {
   BuilderRoute: BuilderRoute,
   LibraryRoute: LibraryRoute,
   ManageRoute: ManageRoute,
+  SavedRoute: SavedRoute,
   SequencesIdRoute: SequencesIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
