@@ -388,22 +388,38 @@ export async function exportSequenceGridPdf(
 
   // Practice notes live in the upper-right corner, clear of the sequence grid.
   const notesW = (pageW - margin * 2) * 0.38;
+  measure.setFont("helvetica", "normal");
+  measure.setFontSize(8.5);
   const notesLines = seq.practice_notes
-    ? (doc.splitTextToSize(seq.practice_notes, notesW) as string[])
+    ? (measure.splitTextToSize(seq.practice_notes, notesW) as string[])
     : [];
   const notesBlockH = notesLines.length ? 4 + notesLines.length * 4 : 0;
   const headerH = Math.max(isScreen ? 19 : 24, notesBlockH + (isScreen ? 6 : 8));
   const footerH = isScreen ? 8 : 10;
   const firstTop = margin + headerH;
-  const restTop = margin + 6;
 
   let imgH = cardW;
   if (isScreen) {
     const targetRows = 4;
-    const avail = pageH - firstTop - margin - footerH;
+    const avail = baseH - firstTop - margin - footerH;
     imgH = Math.max(12, (avail - gap * (targetRows - 1)) / targetRows - labelH);
   }
   const cardH = imgH + labelH;
+
+  // One continuous page: extend the document height to fit every row.
+  const rows = Math.max(1, Math.ceil(seq.items.length / cols));
+  const pageH = Math.max(
+    baseH,
+    firstTop + rows * (cardH + gap) - gap + footerH + margin
+  );
+
+  const doc = new jsPDF({
+    unit: "mm",
+    orientation: pageH >= pageW ? "portrait" : "landscape",
+    format: [pageW, pageH],
+  });
+
+
 
 
   function drawHeader(page: number) {
