@@ -1,7 +1,7 @@
 import type { Dict } from "./en";
 
 export const ru: Dict = {
-  "nav.tagline": "Личная студия",
+  "nav.tagline": "Sequence Designer",
   "nav.createSequence": "Создать последовательность",
   "nav.poseLibrary": "Библиотека асан",
   "nav.savedSequences": "Сохранённые",

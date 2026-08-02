@@ -1,7 +1,7 @@
 import type { Dict } from "./en";
 
 export const it: Dict = {
-  "nav.tagline": "Studio Personale",
+  "nav.tagline": "Sequence Designer",
   "nav.createSequence": "Crea Sequenza",
   "nav.poseLibrary": "Libreria Posizioni",
   "nav.savedSequences": "Sequenze Salvate",

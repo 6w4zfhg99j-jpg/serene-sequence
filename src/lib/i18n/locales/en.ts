@@ -4,7 +4,7 @@
  */
 export const en = {
   // Brand / navigation
-  "nav.tagline": "Personal Studio",
+  "nav.tagline": "Sequence Designer",
   "nav.createSequence": "Create Sequence",
   "nav.poseLibrary": "Pose Library",
   "nav.savedSequences": "Saved Sequences",

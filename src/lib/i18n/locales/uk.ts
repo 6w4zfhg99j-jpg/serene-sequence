@@ -1,7 +1,7 @@
 import type { Dict } from "./en";
 
 export const uk: Dict = {
-  "nav.tagline": "Особиста студія",
+  "nav.tagline": "Sequence Designer",
   "nav.createSequence": "Створити послідовність",
   "nav.poseLibrary": "Бібліотека асан",
   "nav.savedSequences": "Збережені",
