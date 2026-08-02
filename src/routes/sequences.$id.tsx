@@ -69,7 +69,11 @@ import {
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { exportSequencePdf, type PdfLayout } from "@/lib/pdf-export";
+import {
+  exportSequencePdf,
+  type PdfLayout,
+  type PdfFormat,
+} from "@/lib/pdf-export";
 import { useT } from "@/lib/i18n";
 
 const LEVELS: Level[] = ["all-levels", "beginner", "intermediate", "advanced"];
@@ -158,6 +162,7 @@ function SequenceEditor() {
   const [showExport, setShowExport] = useState(false);
   const [includeNotes, setIncludeNotes] = useState(true);
   const [layout, setLayout] = useState<PdfLayout>("grid");
+  const [pdfFormat, setPdfFormat] = useState<PdfFormat>("a4");
   const [exporting, setExporting] = useState(false);
 
 
@@ -193,7 +198,7 @@ function SequenceEditor() {
     if (!seq) return;
     setExporting(true);
     try {
-      await exportSequencePdf(seq, { includeNotes, layout });
+      await exportSequencePdf(seq, { includeNotes, layout, format: pdfFormat });
       setShowExport(false);
     } catch (e: any) {
       toast.error(e.message ?? t("sequence.exportFailed"));
@@ -393,6 +398,64 @@ function SequenceEditor() {
             <DialogTitle className="font-serif text-2xl">Export PDF</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
+            {/* Page format — visual preview cards */}
+            <div className="grid grid-cols-2 gap-3">
+              {(
+                [
+                  [
+                    "a4",
+                    "A4 document",
+                    "Portrait — for printing & sharing",
+                  ],
+                  [
+                    "screen",
+                    "Horizontal screen",
+                    "Landscape — for laptop & tablet",
+                  ],
+                ] as const
+              ).map(([val, title, sub]) => (
+                <button
+                  key={val}
+                  type="button"
+                  onClick={() => setPdfFormat(val)}
+                  aria-pressed={pdfFormat === val}
+                  className={
+                    "flex flex-col items-center gap-2 rounded-lg border p-3 text-center transition-colors " +
+                    (pdfFormat === val
+                      ? "border-accent bg-accent/10"
+                      : "border-line hover:border-ink-muted")
+                  }
+                >
+                  <span className="flex h-16 items-center justify-center">
+                    {val === "a4" ? (
+                      <span className="flex h-16 w-[45px] flex-col gap-[3px] rounded-sm border border-ink-muted/50 bg-background p-1.5 shadow-sm">
+                        <span className="h-1 w-2/3 rounded-full bg-ink-muted/50" />
+                        <span className="grid flex-1 grid-cols-3 gap-[2px]">
+                          {Array.from({ length: 9 }).map((_, i) => (
+                            <span key={i} className="rounded-[1px] bg-ink-muted/25" />
+                          ))}
+                        </span>
+                      </span>
+                    ) : (
+                      <span className="flex flex-col items-center">
+                        <span className="flex h-[52px] w-[86px] flex-col gap-[3px] rounded-sm border border-ink-muted/50 bg-background p-1.5 shadow-sm">
+                          <span className="h-1 w-1/3 rounded-full bg-ink-muted/50" />
+                          <span className="grid flex-1 grid-cols-4 gap-[3px]">
+                            {Array.from({ length: 4 }).map((_, i) => (
+                              <span key={i} className="rounded-[1px] bg-ink-muted/25" />
+                            ))}
+                          </span>
+                        </span>
+                        <span className="h-[3px] w-6 rounded-b bg-ink-muted/40" />
+                      </span>
+                    )}
+                  </span>
+                  <span className="block text-sm font-medium">{title}</span>
+                  <span className="block text-xs text-ink-muted">{sub}</span>
+                </button>
+              ))}
+            </div>
+
             <div className="grid grid-cols-2 gap-2">
               {(
                 [
@@ -425,7 +488,9 @@ function SequenceEditor() {
               </label>
             )}
             <p className="text-xs text-ink-muted">
-              Formatted for A4 with clean margins. Prints beautifully.
+              {pdfFormat === "a4"
+                ? "Formatted for A4 with clean margins. Prints beautifully."
+                : "Widescreen landscape pages with larger images — ideal on a laptop or tablet during class."}
             </p>
           </div>
 
