@@ -327,16 +327,12 @@ export async function exportSequencePdf(
   }
 
   // Footer
-  const pageCount = doc.getNumberOfPages();
-  for (let p = 1; p <= pageCount; p++) {
-    doc.setPage(p);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
-    doc.setTextColor(muted);
-    doc.text(`${seq.title}`, margin, pageH - 8);
-    doc.text(INSTAGRAM, pageW / 2, pageH - 8, { align: "center" });
-    doc.text(`${p} / ${pageCount}`, pageW - margin, pageH - 8, { align: "right" });
-  }
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(muted);
+  doc.text(`${seq.title}`, margin, pageH - 8);
+  doc.text(INSTAGRAM, pageW / 2, pageH - 8, { align: "center" });
+
 
   doc.save(`${seq.title.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}.pdf`);
 }
