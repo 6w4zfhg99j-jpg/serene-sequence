@@ -78,7 +78,14 @@ function ManagePage() {
         <CategoriesPanel />
         <TagsPanel />
       </div>
+
+      <div className="mt-14">
+        <AboutSection />
+      </div>
     </div>
+  );
+}
+
   );
 }
 
