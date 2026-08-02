@@ -322,9 +322,12 @@ export async function exportSequencePdf(
     doc.setTextColor(muted);
     doc.text(String(i + 1).padStart(2, "0"), margin, y + 8);
 
-    // Image
+    // Image — rounded card, image clipped inside the corners
     const url = resolve(it.pose.image_url);
     const x = margin + 12;
+    const radius = cardRadius(imgSize);
+    doc.setFillColor(250, 249, 246);
+    doc.roundedRect(x, y, imgSize, imgSize, radius, radius, "F");
     if (url) {
       const img = loaded.get(url) ?? null;
       if (img) {
@@ -333,22 +336,25 @@ export async function exportSequencePdf(
         let h = imgSize;
         if (ratio > 1) h = imgSize / ratio;
         else w = imgSize * ratio;
-        try {
-          doc.addImage(
-            img.dataUrl,
-            img.format,
-            x + (imgSize - w) / 2,
-            y + (imgSize - h) / 2,
-            w,
-            h
-          );
-        } catch (err) {
-          console.error("[pdf] failed to embed image", url, err);
-        }
+        withRoundedClip(doc, x, y, imgSize, imgSize, radius, () => {
+          try {
+            doc.addImage(
+              img.dataUrl,
+              img.format,
+              x + (imgSize - w) / 2,
+              y + (imgSize - h) / 2,
+              w,
+              h
+            );
+          } catch (err) {
+            console.error("[pdf] failed to embed image", url, err);
+          }
+        });
       }
     }
     doc.setDrawColor(230, 226, 218);
-    doc.rect(x, y, imgSize, imgSize);
+    doc.roundedRect(x, y, imgSize, imgSize, radius, radius, "S");
+
 
     // Text
     const tx = x + imgSize + 6;
