@@ -64,6 +64,7 @@ export interface Sequence {
   id: string;
   title: string;
   description: string | null;
+  practice_notes: string | null;
   level: Level;
   created_at: string;
   updated_at: string;
@@ -610,6 +611,7 @@ export async function fetchSequence(id: string): Promise<Sequence> {
 export async function createSequence(input: {
   title: string;
   description?: string;
+  practice_notes?: string | null;
   level?: Level;
   folder_id?: string | null;
 }): Promise<string> {
@@ -620,6 +622,7 @@ export async function createSequence(input: {
     .insert({
       title: input.title,
       description: input.description ?? null,
+      practice_notes: input.practice_notes ?? null,
       level: input.level ?? "all-levels",
       folder_id: input.folder_id ?? null,
     })
@@ -634,6 +637,7 @@ export async function updateSequence(
   patch: {
     title?: string;
     description?: string | null;
+    practice_notes?: string | null;
     level?: Level;
     folder_id?: string | null;
   },
@@ -669,6 +673,7 @@ export async function duplicateSequence(id: string): Promise<string> {
   const newId = await createSequence({
     title: src.title + " (copy)",
     description: src.description ?? undefined,
+    practice_notes: src.practice_notes ?? null,
     level: src.level,
     folder_id: src.folder_id ?? null,
   });

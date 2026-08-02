@@ -92,6 +92,7 @@ function init(dbPath) {
       id TEXT PRIMARY KEY,
       title TEXT NOT NULL,
       description TEXT,
+      practice_notes TEXT,
       level TEXT NOT NULL DEFAULT 'all-levels',
       folder_id TEXT REFERENCES folders(id) ON DELETE SET NULL,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -140,6 +141,9 @@ function init(dbPath) {
   const seqCols = db.prepare("PRAGMA table_info(sequences)").all().map((c) => c.name);
   if (!seqCols.includes("folder_id")) {
     db.exec("ALTER TABLE sequences ADD COLUMN folder_id TEXT REFERENCES folders(id) ON DELETE SET NULL");
+  }
+  if (!seqCols.includes("practice_notes")) {
+    db.exec("ALTER TABLE sequences ADD COLUMN practice_notes TEXT");
   }
   db.exec("CREATE INDEX IF NOT EXISTS idx_sequences_folder ON sequences(folder_id)");
   db.exec("CREATE INDEX IF NOT EXISTS idx_folders_parent ON folders(parent_id)");
@@ -631,6 +635,7 @@ function getSequence(id) {
     id: s.id,
     title: s.title,
     description: s.description,
+    practice_notes: s.practice_notes ?? null,
     level: s.level,
     created_at: s.created_at,
     updated_at: s.updated_at,
@@ -652,12 +657,13 @@ function getSequence(id) {
 function createSequence(input) {
   const id = randomUUID();
   db.prepare(
-    `INSERT INTO sequences (id, title, description, level, folder_id, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO sequences (id, title, description, practice_notes, level, folder_id, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     id,
     input.title,
     input.description ?? null,
+    input.practice_notes ?? null,
     input.level ?? "all-levels",
     input.folder_id ?? null,
     now(),
@@ -669,7 +675,7 @@ function createSequence(input) {
 function updateSequence(id, patch) {
   const fields = [];
   const values = [];
-  for (const k of ["title", "description", "level", "folder_id"]) {
+  for (const k of ["title", "description", "practice_notes", "level", "folder_id"]) {
     if (k in patch) {
       fields.push(`${k} = ?`);
       values.push(patch[k]);
@@ -698,6 +704,7 @@ function duplicateSequence(id) {
   const newId = createSequence({
     title: src.title + " (copy)",
     description: src.description,
+    practice_notes: src.practice_notes ?? null,
     level: src.level,
     folder_id: src.folder_id ?? null,
   });
