@@ -179,6 +179,7 @@ app.whenReady().then(() => {
   handle("images.importBase64", (_e, name, base64) =>
     images.importBase64(name, base64),
   );
+  handle("images.readDataUrl", (_e, ref) => images.readDataUrl(ref));
 
   createWindow();
 

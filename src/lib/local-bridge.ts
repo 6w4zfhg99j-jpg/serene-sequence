@@ -102,6 +102,8 @@ export interface LocalBridge {
   images: {
     /** Copy a picked file (via base64) into the local images/ folder. */
     importBase64(name: string, base64: string): Promise<string>;
+    /** Read a stored image off disk as a data URL (used by PDF export). */
+    readDataUrl?(ref: string): Promise<string>;
   };
 }
 

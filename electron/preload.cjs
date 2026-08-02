@@ -58,5 +58,6 @@ contextBridge.exposeInMainWorld("yoga", {
   },
   images: {
     importBase64: (name, base64) => invoke("images.importBase64", name, base64),
+    readDataUrl: (ref) => invoke("images.readDataUrl", ref),
   },
 });
