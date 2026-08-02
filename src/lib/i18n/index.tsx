@@ -10,21 +10,19 @@ import {
 
 import { en, type Dict } from "./locales/en";
 import { it } from "./locales/it";
-import { ru } from "./locales/ru";
 import { uk } from "./locales/uk";
 import { fr } from "./locales/fr";
 import { es } from "./locales/es";
 import { de } from "./locales/de";
 
-export type LangCode = "en" | "it" | "ru" | "uk" | "fr" | "es" | "de";
+export type LangCode = "en" | "it" | "uk" | "fr" | "es" | "de";
 export type TKey = keyof Dict;
 
-const CATALOGS: Record<LangCode, Dict> = { en, it, ru, uk, fr, es, de };
+const CATALOGS: Record<LangCode, Dict> = { en, it, uk, fr, es, de };
 
 export const LANGUAGES: { code: LangCode; label: string; english: string }[] = [
   { code: "en", label: "English", english: "English" },
   { code: "it", label: "Italiano", english: "Italian" },
-  { code: "ru", label: "Русский", english: "Russian" },
   { code: "uk", label: "Українська", english: "Ukrainian" },
   { code: "fr", label: "Français", english: "French" },
   { code: "es", label: "Español", english: "Spanish" },

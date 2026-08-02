@@ -7,6 +7,19 @@ import { useT } from "@/lib/i18n";
 import { useCategoryLabel } from "@/lib/i18n/categories";
 
 const LS_KEY = "builder.categoryCollapse.v1";
+const COLS_KEY = "builder.cardsPerRow.v1";
+const COL_OPTIONS = [4, 5, 6] as const;
+const COL_CLASS: Record<number, string> = {
+  4: "grid-cols-4",
+  5: "grid-cols-5",
+  6: "grid-cols-6",
+};
+
+function loadCols(): number {
+  if (typeof window === "undefined") return 5;
+  const v = Number(localStorage.getItem(COLS_KEY));
+  return COL_OPTIONS.includes(v as (typeof COL_OPTIONS)[number]) ? v : 5;
+}
 const OTHER = "__other__";
 
 interface Props {
@@ -31,6 +44,11 @@ export function BuilderLibrary({ poses, categories, subcategories = [], onAdd }:
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>(loadCollapse);
   const [activeSub, setActiveSub] = useState<Record<string, string | null>>({});
   const [pulsed, setPulsed] = useState<string | null>(null);
+  const [cols, setCols] = useState<number>(loadCols);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") localStorage.setItem(COLS_KEY, String(cols));
+  }, [cols]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -103,6 +121,24 @@ export function BuilderLibrary({ poses, categories, subcategories = [], onAdd }:
         >
           <Heart className={"size-3 " + (favOnly ? "fill-current" : "")} strokeWidth={2} />
         </button>
+        <div className="flex h-8 items-center gap-0.5 rounded-md border border-line px-1">
+          {COL_OPTIONS.map((n) => (
+            <button
+              key={n}
+              type="button"
+              onClick={() => setCols(n)}
+              title={`${n} per row`}
+              className={
+                "rounded px-1.5 py-0.5 text-[11px] transition-colors " +
+                (cols === n
+                  ? "bg-ink text-background"
+                  : "text-ink-muted hover:text-ink")
+              }
+            >
+              {n}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="-mr-1 flex-1 overflow-y-auto pr-1">
@@ -171,7 +207,7 @@ export function BuilderLibrary({ poses, categories, subcategories = [], onAdd }:
                 </div>
               )}
               {!isCollapsed && (
-                <div className="mb-2 mt-1 grid grid-cols-3 gap-1.5 pl-2 sm:grid-cols-4 lg:grid-cols-5">
+                <div className={"mb-2 mt-1 grid gap-1.5 pl-2 " + COL_CLASS[cols]}>
                   {visiblePoses.map((p) => (
                     <button
                       key={id + "-" + p.id}

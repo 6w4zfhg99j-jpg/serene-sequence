@@ -30,7 +30,6 @@ export const CATEGORY_LABELS: Record<string, CategoryLabels> = {
   INIZIO: {
     it: "INIZIO",
     en: "START",
-    ru: "НАЧАЛО",
     uk: "ПОЧАТОК",
     fr: "DÉBUT",
     es: "INICIO",
@@ -39,7 +38,6 @@ export const CATEGORY_LABELS: Record<string, CategoryLabels> = {
   RISCALDAMENTO: {
     it: "RISCALDAMENTO",
     en: "WARM-UP",
-    ru: "РАЗМИНКА",
     uk: "РОЗМИНКА",
     fr: "ÉCHAUFFEMENT",
     es: "CALENTAMIENTO",
@@ -48,7 +46,6 @@ export const CATEGORY_LABELS: Record<string, CategoryLabels> = {
   "IN PIEDI": {
     it: "IN PIEDI",
     en: "STANDING",
-    ru: "СТОЯ",
     uk: "СТОЯЧИ",
     fr: "DEBOUT",
     es: "DE PIE",
@@ -57,7 +54,6 @@ export const CATEGORY_LABELS: Record<string, CategoryLabels> = {
   "EQUILIBRIO BRACCIA": {
     it: "EQUILIBRIO BRACCIA",
     en: "ARM BALANCE",
-    ru: "БАЛАНС НА РУКАХ",
     uk: "БАЛАНС НА РУКАХ",
     fr: "ÉQUILIBRE SUR LES BRAS",
     es: "EQUILIBRIO SOBRE BRAZOS",
@@ -66,7 +62,6 @@ export const CATEGORY_LABELS: Record<string, CategoryLabels> = {
   ALLUNGAMENTO: {
     it: "ALLUNGAMENTO",
     en: "STRETCHING",
-    ru: "РАСТЯЖКА",
     uk: "РОЗТЯЖКА",
     fr: "ÉTIREMENT",
     es: "ESTIRAMIENTO",
@@ -75,7 +70,6 @@ export const CATEGORY_LABELS: Record<string, CategoryLabels> = {
   FORZA: {
     it: "FORZA",
     en: "STRENGTH",
-    ru: "СИЛА",
     uk: "СИЛА",
     fr: "FORCE",
     es: "FUERZA",
@@ -84,7 +78,6 @@ export const CATEGORY_LABELS: Record<string, CategoryLabels> = {
   TORSIONE: {
     it: "TORSIONE",
     en: "TWIST",
-    ru: "СКРУТКИ",
     uk: "СКРУТКИ",
     fr: "TORSION",
     es: "TORSIÓN",
@@ -93,7 +86,6 @@ export const CATEGORY_LABELS: Record<string, CategoryLabels> = {
   "DA SDRAIATI": {
     it: "DA SDRAIATI",
     en: "LYING DOWN",
-    ru: "ЛЁЖА",
     uk: "ЛЕЖАЧИ",
     fr: "ALLONGÉ",
     es: "TUMBADOS",
@@ -102,7 +94,6 @@ export const CATEGORY_LABELS: Record<string, CategoryLabels> = {
   ESTENSIONE: {
     it: "ESTENSIONE",
     en: "BACKBEND",
-    ru: "ПРОГИБЫ",
     uk: "ПРОГИНИ",
     fr: "EXTENSION",
     es: "EXTENSIÓN",
@@ -111,7 +102,6 @@ export const CATEGORY_LABELS: Record<string, CategoryLabels> = {
   "DA SDRAIATI ADDOMINALI": {
     it: "DA SDRAIATI ADDOMINALI",
     en: "LYING CORE",
-    ru: "ЛЁЖА: ПРЕСС",
     uk: "ЛЕЖАЧИ: ПРЕС",
     fr: "ABDOS AU SOL",
     es: "ABDOMINALES TUMBADOS",
@@ -120,7 +110,6 @@ export const CATEGORY_LABELS: Record<string, CategoryLabels> = {
   CAPOVOLTE: {
     it: "CAPOVOLTE",
     en: "INVERSIONS",
-    ru: "ПЕРЕВЁРНУТЫЕ",
     uk: "ПЕРЕВЕРНУТІ",
     fr: "INVERSIONS",
     es: "INVERSIONES",

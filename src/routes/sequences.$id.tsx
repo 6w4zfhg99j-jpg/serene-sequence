@@ -135,7 +135,7 @@ function SequenceEditor() {
     mutationFn: () => deleteSequence(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sequences"] });
-      nav({ to: "/" });
+      nav({ to: "/saved" });
     },
   });
   const applyTags = useMutation({
@@ -207,7 +207,7 @@ function SequenceEditor() {
       {/* Header */}
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div className="flex-1">
-          <Button variant="ghost" size="sm" onClick={() => nav({ to: "/" })}>
+          <Button variant="ghost" size="sm" onClick={() => nav({ to: "/saved" })}>
             <ArrowLeft className="mr-1 size-4" /> All sequences
           </Button>
           <Input

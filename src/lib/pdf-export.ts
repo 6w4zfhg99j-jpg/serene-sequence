@@ -125,7 +125,7 @@ export async function exportSequencePdf(
   opts: { includeNotes: boolean; layout?: PdfLayout }
 ) {
   if ((opts.layout ?? "list") === "grid") {
-    return exportSequenceGridPdf(seq);
+    return exportSequenceGridPdf(seq, { includeNotes: opts.includeNotes });
   }
   const doc = new jsPDF({ unit: "mm", format: "a4" });
 
@@ -299,7 +299,11 @@ export async function exportSequencePdf(
   doc.save(`${seq.title.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}.pdf`);
 }
 
-export async function exportSequenceGridPdf(seq: Sequence) {
+export async function exportSequenceGridPdf(
+  seq: Sequence,
+  opts: { includeNotes?: boolean } = {}
+) {
+  const withNotes = opts.includeNotes !== false;
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const pageW = 210;
   const pageH = 297;
@@ -329,7 +333,8 @@ export async function exportSequenceGridPdf(seq: Sequence) {
   const gap = 4;
   const cardW = (pageW - margin * 2 - gap * (cols - 1)) / cols;
   const imgH = cardW;
-  const labelH = 9;
+  const hasNotes = withNotes && seq.items.some((it) => !!it.notes);
+  const labelH = hasNotes ? 16 : 9;
   const cardH = imgH + labelH;
 
   const notesLines = seq.practice_notes
@@ -458,11 +463,23 @@ export async function exportSequenceGridPdf(seq: Sequence) {
     const bits: string[] = [];
     if (dur) bits.push(formatDuration(dur));
     if (it.side) bits.push(it.side);
+    let ty = y + imgH + 3.5 + nameLines.length * 3;
     if (bits.length) {
       doc.setFontSize(6.5);
       doc.setTextColor(muted);
-      doc.text(bits.join(" · "), x + cardW / 2, y + imgH + 3.5 + nameLines.length * 3, {
-        align: "center",
+      doc.text(bits.join(" · "), x + cardW / 2, ty, { align: "center" });
+      ty += 2.6;
+    }
+
+    // Pose note — small, light grey, directly under the name
+    if (withNotes && it.notes) {
+      doc.setFontSize(5.8);
+      doc.setTextColor(150, 146, 138);
+      const noteLines = doc
+        .splitTextToSize(it.notes, cardW - 1)
+        .slice(0, 3) as string[];
+      noteLines.forEach((ln, li) => {
+        doc.text(ln, x + cardW / 2, ty + li * 2.3, { align: "center" });
       });
     }
 
@@ -471,6 +488,7 @@ export async function exportSequenceGridPdf(seq: Sequence) {
       col = 0;
       y += cardH + gap;
     }
+
   }
 
   const pageCount = doc.getNumberOfPages();
