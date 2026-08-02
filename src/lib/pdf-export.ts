@@ -349,13 +349,14 @@ export async function exportSequenceGridPdf(
   const format = opts.format ?? "a4";
   const isScreen = format === "screen";
   const geom = pageSize(format);
-  const doc = new jsPDF({
+  const measure = new jsPDF({
     unit: "mm",
     orientation: geom.orientation,
     format: geom.spec,
   });
   const pageW = geom.w;
-  const pageH = geom.h;
+  const baseH = geom.h;
+
   const margin = isScreen ? 9 : 12;
   const ink = "#2a2620";
   const muted = "#6b665e";
