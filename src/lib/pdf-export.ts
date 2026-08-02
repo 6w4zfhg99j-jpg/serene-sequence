@@ -250,10 +250,13 @@ export async function exportSequenceGridPdf(
   // 7-col screen layout is a "teaching board": fewer rows so each card is
   // noticeably larger for viewing from a distance. 10-col stays compact.
   const screenRows = isScreen ? (cols <= 7 ? 3 : 4) : 0;
-  const gap = dense ? 3 : isScreen ? 4 : cols >= 7 ? 3.5 : 4;
+  const gap = dense ? 3 : isScreen ? 4 : cols <= 3 ? 5 : 4;
   const cardW = (pageW - margin * 2 - gap * (cols - 1)) / cols;
+  // 3-col portrait is a large, readable teaching layout; allow the cards to
+  // grow well beyond the compact 5-col scale.
+  const maxScale = isScreen ? (cols <= 7 ? 1.55 : 1.25) : cols <= 3 ? 1.7 : 1.25;
   const scale = Math.min(
-    isScreen && cols <= 7 ? 1.55 : 1.25,
+    maxScale,
     Math.max(0.9, cardW / (isScreen ? 26 : 36))
   );
   const labelH = (isScreen ? (hasNotes ? 10 : 7) : hasNotes ? 16 : 9) * (dense ? 1 : scale);
