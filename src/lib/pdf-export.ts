@@ -134,6 +134,11 @@ export async function exportSequencePdf(
 
   // Resolve every image URL, then fully preload the bitmaps before drawing.
   const resolve = await resolveExportUrls(seq.items.map((it) => it.pose.image_url));
+  for (const it of seq.items) {
+    if (it.pose.image_url && !resolve(it.pose.image_url)) {
+      console.error("[pdf] could not resolve image path", it.pose.image_url);
+    }
+  }
   const loaded = new Map<string, LoadedImage | null>();
   await Promise.all(
     Array.from(
@@ -278,6 +283,11 @@ export async function exportSequenceGridPdf(seq: Sequence) {
   const muted = "#6b665e";
 
   const resolve = await resolveExportUrls(seq.items.map((it) => it.pose.image_url));
+  for (const it of seq.items) {
+    if (it.pose.image_url && !resolve(it.pose.image_url)) {
+      console.error("[pdf] could not resolve image path", it.pose.image_url);
+    }
+  }
   const loaded = new Map<string, LoadedImage | null>();
   await Promise.all(
     Array.from(
