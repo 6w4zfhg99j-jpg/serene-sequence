@@ -93,10 +93,6 @@ export const en = {
   "sequence.sideLeft": "Left",
   "sequence.export": "Export PDF",
   "sequence.exportFailed": "Export failed",
-  "sequence.layoutGrid": "Compact grid",
-  "sequence.layoutGridHint": "Thumbnails + names, fills the page",
-  "sequence.layoutList": "Detailed list",
-  "sequence.layoutListHint": "One pose per row with cues",
   "sequence.includeNotes": "Include per-pose notes",
 
   // Pose form
