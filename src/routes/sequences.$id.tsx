@@ -566,7 +566,7 @@ function SequenceRow({
       style={style}
       className="group rounded-lg border border-line bg-background"
     >
-      <div className="flex items-center gap-3 p-2.5">
+      <div className="flex items-start gap-3 p-2.5">
         <button
           className="cursor-grab touch-none text-ink-subtle hover:text-ink"
           {...attributes}
@@ -590,7 +590,13 @@ function SequenceRow({
               {item.pose.sanskrit_name}
             </p>
           )}
+          {item.notes && (
+            <p className="mt-0.5 whitespace-pre-line text-[11px] leading-snug text-ink-subtle">
+              {item.notes}
+            </p>
+          )}
         </div>
+
         <button
           onClick={() => setOpenNotes((v) => !v)}
           className="rounded px-2 py-1 text-xs text-ink-muted hover:bg-surface hover:text-ink"
