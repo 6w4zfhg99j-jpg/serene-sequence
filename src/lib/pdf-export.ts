@@ -472,19 +472,20 @@ export async function exportSequenceGridPdf(
 
     // Index badge
     doc.setFont("times", "italic");
-    doc.setFontSize(8);
+    doc.setFontSize(isScreen ? 6.5 : 8);
     doc.setTextColor(muted);
-    doc.text(String(i + 1).padStart(2, "0"), x + 1.5, y + 4.5);
+    doc.text(String(i + 1).padStart(2, "0"), x + 1.2, y + (isScreen ? 3.6 : 4.5));
 
     // Name
+    const nameLead = isScreen ? 2.7 : 3;
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(isScreen ? 9 : 7.5);
+    doc.setFontSize(isScreen ? 7 : 7.5);
     doc.setTextColor(ink);
     const nameLines = doc
       .splitTextToSize(it.pose.name, cardW - 1)
       .slice(0, 2) as string[];
     nameLines.forEach((ln, li) => {
-      doc.text(ln, x + cardW / 2, y + imgH + 3.5 + li * 3, { align: "center" });
+      doc.text(ln, x + cardW / 2, y + imgH + 3 + li * nameLead, { align: "center" });
     });
 
     // Duration / side
@@ -492,25 +493,26 @@ export async function exportSequenceGridPdf(
     const bits: string[] = [];
     if (dur) bits.push(formatDuration(dur));
     if (it.side) bits.push(it.side);
-    let ty = y + imgH + 3.5 + nameLines.length * 3;
+    let ty = y + imgH + 3 + nameLines.length * nameLead;
     if (bits.length) {
-      doc.setFontSize(6.5);
+      doc.setFontSize(isScreen ? 5.8 : 6.5);
       doc.setTextColor(muted);
       doc.text(bits.join(" · "), x + cardW / 2, ty, { align: "center" });
-      ty += 2.6;
+      ty += isScreen ? 2.3 : 2.6;
     }
 
     // Pose note — small, light grey, directly under the name
     if (withNotes && it.notes) {
-      doc.setFontSize(5.8);
+      doc.setFontSize(isScreen ? 5.2 : 5.8);
       doc.setTextColor(150, 146, 138);
       const noteLines = doc
         .splitTextToSize(it.notes, cardW - 1)
-        .slice(0, 3) as string[];
+        .slice(0, isScreen ? 2 : 3) as string[];
       noteLines.forEach((ln, li) => {
-        doc.text(ln, x + cardW / 2, ty + li * 2.3, { align: "center" });
+        doc.text(ln, x + cardW / 2, ty + li * (isScreen ? 2.1 : 2.3), { align: "center" });
       });
     }
+
 
     col += 1;
     if (col === cols) {
