@@ -23,10 +23,9 @@ export function AppNav() {
           {NAV.map((item) => {
             const active =
               item.to === "/"
-                ? pathname === "/"
+                ? pathname === "/" || pathname.startsWith("/sequences/")
                 : pathname === item.to ||
-                  pathname.startsWith(item.to + "/") ||
-                  (item.to === "/" && pathname.startsWith("/sequences/"));
+                  pathname.startsWith(item.to + "/");
             return (
               <Link
                 key={item.to}
