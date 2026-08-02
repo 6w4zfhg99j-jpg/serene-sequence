@@ -473,7 +473,7 @@ function SequenceEditor() {
                   >
                     <span className="block text-sm font-medium">{n} per row</span>
                     <span className="mt-0.5 block text-xs text-ink-muted">
-                      {n >= 10 ? "Maximum density" : n >= 7 ? "Balanced" : "Larger cards"}
+                      {n >= 10 ? "Maximum density" : n >= 7 ? "Balanced" : n <= 3 ? "Large & readable" : "Compact"}
                     </span>
                   </button>
                 ))}
