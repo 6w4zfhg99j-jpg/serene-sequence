@@ -11,23 +11,18 @@ import {
 import { en, type Dict } from "./locales/en";
 import { it } from "./locales/it";
 import { uk } from "./locales/uk";
-import { fr } from "./locales/fr";
-import { es } from "./locales/es";
-import { de } from "./locales/de";
 
-export type LangCode = "en" | "it" | "uk" | "fr" | "es" | "de";
+export type LangCode = "en" | "it" | "uk";
 export type TKey = keyof Dict;
 
-const CATALOGS: Record<LangCode, Dict> = { en, it, uk, fr, es, de };
+const CATALOGS: Record<LangCode, Dict> = { en, it, uk };
 
 export const LANGUAGES: { code: LangCode; label: string; english: string }[] = [
   { code: "en", label: "English", english: "English" },
   { code: "it", label: "Italiano", english: "Italian" },
   { code: "uk", label: "Українська", english: "Ukrainian" },
-  { code: "fr", label: "Français", english: "French" },
-  { code: "es", label: "Español", english: "Spanish" },
-  { code: "de", label: "Deutsch", english: "German" },
 ];
+
 
 const STORAGE_KEY = "vona.language.v1";
 
