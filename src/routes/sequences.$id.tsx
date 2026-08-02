@@ -39,7 +39,6 @@ import {
   fetchPoses,
   fetchSequence,
   fetchTags,
-  formatDuration,
   removeSequenceItem,
   reorderSequenceItems,
   setSequenceTags,
@@ -191,11 +190,6 @@ function SequenceEditor() {
     reorder.mutate(newIds);
   }
 
-  const totalDuration = seq.items.reduce(
-    (s, it) => s + (it.duration_seconds ?? it.pose.duration_seconds ?? 0),
-    0
-  );
-
   async function doExport() {
     if (!seq) return;
     setExporting(true);
@@ -291,10 +285,6 @@ function SequenceEditor() {
               ))}
             </SelectContent>
           </Select>
-        </div>
-        <div>
-          <span className="label-eyebrow mr-2">Total</span>
-          <span className="font-medium">{formatDuration(totalDuration)}</span>
         </div>
         <div>
           <span className="label-eyebrow mr-2">Poses</span>
