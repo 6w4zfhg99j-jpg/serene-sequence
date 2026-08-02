@@ -117,6 +117,9 @@ async function loadImageAsDataUrl(url: string): Promise<LoadedImage | null> {
 
 export type PdfLayout = "list" | "grid";
 
+const BRAND = "VONA Sequence Designer";
+const INSTAGRAM = "Instagram: @vonasequencedesigner";
+
 export async function exportSequencePdf(
   seq: Sequence,
   opts: { includeNotes: boolean; layout?: PdfLayout }
@@ -289,6 +292,7 @@ export async function exportSequencePdf(
     doc.setFontSize(8);
     doc.setTextColor(muted);
     doc.text(`${seq.title}`, margin, pageH - 8);
+    doc.text(INSTAGRAM, pageW / 2, pageH - 8, { align: "center" });
     doc.text(`${p} / ${pageCount}`, pageW - margin, pageH - 8, { align: "right" });
   }
 
@@ -461,6 +465,7 @@ export async function exportSequenceGridPdf(seq: Sequence) {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
     doc.setTextColor(muted);
+    doc.text(INSTAGRAM, pageW / 2, pageH - 6, { align: "center" });
     doc.text(`${p} / ${pageCount}`, pageW - margin, pageH - 6, { align: "right" });
   }
 
