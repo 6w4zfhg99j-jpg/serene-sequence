@@ -247,9 +247,15 @@ export async function exportSequenceGridPdf(
     : defaultColumns(format);
   // Denser grids need tighter gaps and smaller type to stay balanced.
   const dense = cols >= 10;
+  // 7-col screen layout is a "teaching board": fewer rows so each card is
+  // noticeably larger for viewing from a distance. 10-col stays compact.
+  const screenRows = isScreen ? (cols <= 7 ? 3 : 4) : 0;
   const gap = dense ? 3 : isScreen ? 4 : cols >= 7 ? 3.5 : 4;
   const cardW = (pageW - margin * 2 - gap * (cols - 1)) / cols;
-  const scale = Math.min(1.25, Math.max(0.9, cardW / (isScreen ? 26 : 36)));
+  const scale = Math.min(
+    isScreen && cols <= 7 ? 1.55 : 1.25,
+    Math.max(0.9, cardW / (isScreen ? 26 : 36))
+  );
   const labelH = (isScreen ? (hasNotes ? 10 : 7) : hasNotes ? 16 : 9) * (dense ? 1 : scale);
 
   // Practice notes live in the upper-right corner, clear of the sequence grid.
@@ -266,9 +272,8 @@ export async function exportSequenceGridPdf(
 
   let imgH = cardW;
   if (isScreen) {
-    const targetRows = 4;
     const avail = baseH - firstTop - margin - footerH;
-    imgH = Math.max(12, (avail - gap * (targetRows - 1)) / targetRows - labelH);
+    imgH = Math.max(12, (avail - gap * (screenRows - 1)) / screenRows - labelH);
   }
   const cardH = imgH + labelH;
 
