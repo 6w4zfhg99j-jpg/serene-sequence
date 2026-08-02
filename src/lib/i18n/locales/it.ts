@@ -78,6 +78,8 @@ export const it: Dict = {
   "builder.libraryPanel": "Libreria",
   "builder.sequencePanel": "Sequenza",
   "sequence.descriptionPlaceholder": "Descrivi l'intenzione di questa sequenza...",
+  "sequence.practiceNotes": "Note della pratica",
+  "sequence.practiceNotesPlaceholder": "Intenzione, indicazioni sul respiro, promemoria, modifiche...",
   "sequence.notesPlaceholder": "Indicazioni su respiro, allineamento, variazioni...",
   "sequence.side": "Lato",
   "sequence.sideBoth": "Entrambi / N/D",

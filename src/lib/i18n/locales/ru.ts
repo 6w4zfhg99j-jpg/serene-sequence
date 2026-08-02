@@ -80,6 +80,8 @@ export const ru: Dict = {
   "builder.libraryPanel": "Библиотека",
   "builder.sequencePanel": "Последовательность",
   "sequence.descriptionPlaceholder": "Опишите замысел этой последовательности...",
+  "sequence.practiceNotes": "Заметки к практике",
+  "sequence.practiceNotesPlaceholder": "Намерение, дыхание, напоминания, модификации...",
   "sequence.notesPlaceholder": "Дыхание, выравнивание, вариации...",
   "sequence.side": "Сторона",
   "sequence.sideBoth": "Обе / не важно",

@@ -79,6 +79,8 @@ export const uk: Dict = {
   "builder.libraryPanel": "Бібліотека",
   "builder.sequencePanel": "Послідовність",
   "sequence.descriptionPlaceholder": "Опишіть задум цієї послідовності...",
+  "sequence.practiceNotes": "Нотатки до практики",
+  "sequence.practiceNotesPlaceholder": "Намір, дихання, нагадування, модифікації...",
   "sequence.notesPlaceholder": "Дихання, вирівнювання, варіації...",
   "sequence.side": "Сторона",
   "sequence.sideBoth": "Обидві / не важливо",

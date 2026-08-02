@@ -84,6 +84,8 @@ export const en = {
   "builder.libraryPanel": "Library",
   "builder.sequencePanel": "Sequence",
   "sequence.descriptionPlaceholder": "Describe the intention of this sequence...",
+  "sequence.practiceNotes": "Practice Notes",
+  "sequence.practiceNotesPlaceholder": "Intention, breathing cues, teaching reminders, modifications...",
   "sequence.notesPlaceholder": "Cue the breath, alignment, a variation...",
   "sequence.side": "Side",
   "sequence.sideBoth": "Both / N/A",

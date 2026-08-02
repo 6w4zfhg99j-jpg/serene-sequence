@@ -79,6 +79,8 @@ export const de: Dict = {
   "builder.libraryPanel": "Bibliothek",
   "builder.sequencePanel": "Sequenz",
   "sequence.descriptionPlaceholder": "Beschreibe die Absicht dieser Sequenz...",
+  "sequence.practiceNotes": "Praxisnotizen",
+  "sequence.practiceNotesPlaceholder": "Intention, Atemhinweise, Erinnerungen, Anpassungen...",
   "sequence.notesPlaceholder": "Atem, Ausrichtung, Variationen...",
   "sequence.side": "Seite",
   "sequence.sideBoth": "Beide / k. A.",
