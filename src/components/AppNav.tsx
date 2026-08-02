@@ -3,9 +3,9 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { useT } from "@/lib/i18n";
 
 const NAV = [
-  { to: "/builder", key: "nav.createSequence" },
+  { to: "/", key: "nav.createSequence" },
   { to: "/library", key: "nav.poseLibrary" },
-  { to: "/", key: "nav.savedSequences" },
+  { to: "/saved", key: "nav.savedSequences" },
   { to: "/manage", key: "nav.settings" },
 ] as const;
 
@@ -26,7 +26,7 @@ export function AppNav() {
                 ? pathname === "/"
                 : pathname === item.to ||
                   pathname.startsWith(item.to + "/") ||
-                  (item.to === "/builder" && pathname.startsWith("/sequences/"));
+                  (item.to === "/" && pathname.startsWith("/sequences/"));
             return (
               <Link
                 key={item.to}
