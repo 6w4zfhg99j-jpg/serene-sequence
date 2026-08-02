@@ -255,16 +255,10 @@ export async function exportSequencePdf(
   doc.line(margin, hy, pageW - margin, hy);
 
   let y = hy + 8;
-  const rowH = 38;
-  const imgSize = 32;
-
 
   for (let i = 0; i < seq.items.length; i++) {
     const it = seq.items[i];
-    if (y + rowH > pageH - margin) {
-      doc.addPage();
-      y = margin;
-    }
+
 
     // Number
     doc.setFont("times", "italic");
