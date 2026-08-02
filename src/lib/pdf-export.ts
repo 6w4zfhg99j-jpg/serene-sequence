@@ -328,7 +328,7 @@ export async function exportSequenceGridPdf(
   });
   const pageW = geom.w;
   const pageH = geom.h;
-  const margin = 12;
+  const margin = isScreen ? 9 : 12;
   const ink = "#2a2620";
   const muted = "#6b665e";
 
@@ -349,22 +349,30 @@ export async function exportSequenceGridPdf(
     ).map(async (u) => loaded.set(u, await loadImageAsDataUrl(u)))
   );
 
-  // Grid metrics — screen format uses fewer, larger cards
-  const cols = isScreen ? 4 : 5;
-  const gap = isScreen ? 6 : 4;
-  const cardW = (pageW - margin * 2 - gap * (cols - 1)) / cols;
-  const imgH = cardW;
+  // Grid metrics — screen format is a compact teaching board: more, smaller
+  // cards sized so ~5 rows fit on one landscape page.
   const hasNotes = withNotes && seq.items.some((it) => !!it.notes);
-  const labelH = isScreen ? (hasNotes ? 20 : 12) : hasNotes ? 16 : 9;
-  const cardH = imgH + labelH;
+  const cols = isScreen ? 7 : 5;
+  const gap = isScreen ? 3 : 4;
+  const cardW = (pageW - margin * 2 - gap * (cols - 1)) / cols;
+  const labelH = isScreen ? (hasNotes ? 10 : 6) : hasNotes ? 16 : 9;
 
   const notesLines = seq.practice_notes
     ? (doc.splitTextToSize(seq.practice_notes, pageW - margin * 2) as string[])
     : [];
-  const headerH = 24 + notesLines.length * 4;
-  const footerH = 10;
+  const headerH = (isScreen ? 19 : 24) + notesLines.length * 4;
+  const footerH = isScreen ? 8 : 10;
   const firstTop = margin + headerH;
   const restTop = margin + 6;
+
+  let imgH = cardW;
+  if (isScreen) {
+    const targetRows = 5;
+    const avail = pageH - firstTop - margin - footerH;
+    imgH = Math.max(12, (avail - gap * (targetRows - 1)) / targetRows - labelH);
+  }
+  const cardH = imgH + labelH;
+
 
   function drawHeader(page: number) {
     if (page === 1) {
@@ -464,19 +472,20 @@ export async function exportSequenceGridPdf(
 
     // Index badge
     doc.setFont("times", "italic");
-    doc.setFontSize(8);
+    doc.setFontSize(isScreen ? 6.5 : 8);
     doc.setTextColor(muted);
-    doc.text(String(i + 1).padStart(2, "0"), x + 1.5, y + 4.5);
+    doc.text(String(i + 1).padStart(2, "0"), x + 1.2, y + (isScreen ? 3.6 : 4.5));
 
     // Name
+    const nameLead = isScreen ? 2.7 : 3;
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(isScreen ? 9 : 7.5);
+    doc.setFontSize(isScreen ? 7 : 7.5);
     doc.setTextColor(ink);
     const nameLines = doc
       .splitTextToSize(it.pose.name, cardW - 1)
       .slice(0, 2) as string[];
     nameLines.forEach((ln, li) => {
-      doc.text(ln, x + cardW / 2, y + imgH + 3.5 + li * 3, { align: "center" });
+      doc.text(ln, x + cardW / 2, y + imgH + 3 + li * nameLead, { align: "center" });
     });
 
     // Duration / side
@@ -484,25 +493,26 @@ export async function exportSequenceGridPdf(
     const bits: string[] = [];
     if (dur) bits.push(formatDuration(dur));
     if (it.side) bits.push(it.side);
-    let ty = y + imgH + 3.5 + nameLines.length * 3;
+    let ty = y + imgH + 3 + nameLines.length * nameLead;
     if (bits.length) {
-      doc.setFontSize(6.5);
+      doc.setFontSize(isScreen ? 5.8 : 6.5);
       doc.setTextColor(muted);
       doc.text(bits.join(" · "), x + cardW / 2, ty, { align: "center" });
-      ty += 2.6;
+      ty += isScreen ? 2.3 : 2.6;
     }
 
     // Pose note — small, light grey, directly under the name
     if (withNotes && it.notes) {
-      doc.setFontSize(5.8);
+      doc.setFontSize(isScreen ? 5.2 : 5.8);
       doc.setTextColor(150, 146, 138);
       const noteLines = doc
         .splitTextToSize(it.notes, cardW - 1)
-        .slice(0, 3) as string[];
+        .slice(0, isScreen ? 2 : 3) as string[];
       noteLines.forEach((ln, li) => {
-        doc.text(ln, x + cardW / 2, ty + li * 2.3, { align: "center" });
+        doc.text(ln, x + cardW / 2, ty + li * (isScreen ? 2.1 : 2.3), { align: "center" });
       });
     }
+
 
     col += 1;
     if (col === cols) {
