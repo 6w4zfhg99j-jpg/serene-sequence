@@ -125,7 +125,7 @@ export function pageSize(format: PdfFormat) {
     : { w: 210, h: 297, orientation: "portrait" as const, spec: "a4" as const };
 }
 
-const BRAND = "VONA Sequence Designer";
+
 const INSTAGRAM = "Instagram: @vonasequencedesigner";
 
 export async function exportSequencePdf(
@@ -169,10 +169,16 @@ export async function exportSequencePdf(
 
   // Header — brand line, practice name, meta, practice notes
   let hy = margin;
+  doc.setFont("times", "italic");
+  doc.setFontSize(12);
+  doc.setTextColor(ink);
+  doc.text("VONA", margin, hy);
+  const vonaW = doc.getTextWidth("VONA");
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(8);
+  doc.setFontSize(9.5);
   doc.setTextColor(muted);
-  doc.text(BRAND.toUpperCase(), margin, hy);
+  doc.text("SEQUENCE DESIGNER", margin + vonaW + 2, hy);
+
 
   hy += 9;
   doc.setTextColor(ink);
@@ -349,25 +355,28 @@ export async function exportSequenceGridPdf(
     ).map(async (u) => loaded.set(u, await loadImageAsDataUrl(u)))
   );
 
-  // Grid metrics — screen format is a compact teaching board: more, smaller
-  // cards sized so ~5 rows fit on one landscape page.
+  // Grid metrics — screen format is a teaching board: comfortable cards
+  // sized so ~4 rows fit on one landscape page.
   const hasNotes = withNotes && seq.items.some((it) => !!it.notes);
-  const cols = isScreen ? 7 : 5;
-  const gap = isScreen ? 3 : 4;
+  const cols = isScreen ? 6 : 5;
+  const gap = isScreen ? 4 : 4;
   const cardW = (pageW - margin * 2 - gap * (cols - 1)) / cols;
-  const labelH = isScreen ? (hasNotes ? 10 : 6) : hasNotes ? 16 : 9;
+  const labelH = isScreen ? (hasNotes ? 11 : 7) : hasNotes ? 16 : 9;
 
+  // Practice notes live in the upper-right corner, clear of the sequence grid.
+  const notesW = (pageW - margin * 2) * 0.38;
   const notesLines = seq.practice_notes
-    ? (doc.splitTextToSize(seq.practice_notes, pageW - margin * 2) as string[])
+    ? (doc.splitTextToSize(seq.practice_notes, notesW) as string[])
     : [];
-  const headerH = (isScreen ? 19 : 24) + notesLines.length * 4;
+  const notesBlockH = notesLines.length ? 4 + notesLines.length * 4 : 0;
+  const headerH = Math.max(isScreen ? 19 : 24, notesBlockH + (isScreen ? 6 : 8));
   const footerH = isScreen ? 8 : 10;
   const firstTop = margin + headerH;
   const restTop = margin + 6;
 
   let imgH = cardW;
   if (isScreen) {
-    const targetRows = 5;
+    const targetRows = 4;
     const avail = pageH - firstTop - margin - footerH;
     imgH = Math.max(12, (avail - gap * (targetRows - 1)) / targetRows - labelH);
   }
@@ -376,15 +385,20 @@ export async function exportSequenceGridPdf(
 
   function drawHeader(page: number) {
     if (page === 1) {
+      doc.setFont("times", "italic");
+      doc.setFontSize(12);
+      doc.setTextColor(ink);
+      doc.text("VONA", margin, margin);
+      const vonaW = doc.getTextWidth("VONA");
       doc.setFont("helvetica", "normal");
-      doc.setFontSize(8);
+      doc.setFontSize(9.5);
       doc.setTextColor(muted);
-      doc.text(BRAND.toUpperCase(), margin, margin);
+      doc.text("SEQUENCE DESIGNER", margin + vonaW + 2, margin);
 
       doc.setFont("times", "italic");
       doc.setFontSize(20);
       doc.setTextColor(ink);
-      doc.text(seq.title, margin, margin + 9);
+      doc.text(seq.title, margin, margin + 10);
 
       const totalDur = seq.items.reduce(
         (s, it) => s + (it.duration_seconds ?? it.pose.duration_seconds ?? 0),
@@ -401,13 +415,22 @@ export async function exportSequenceGridPdf(
       ]
         .filter(Boolean)
         .join("   ·   ");
-      doc.text(meta, margin, margin + 14);
+      doc.text(meta, margin, margin + 15);
+
       if (notesLines.length) {
-        doc.setFontSize(9);
+        const nx = pageW - margin;
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7);
+        doc.setTextColor(muted);
+        doc.text("PRACTICE NOTES", nx, margin, { align: "right" });
+        doc.setFontSize(8.5);
         doc.setTextColor(ink);
-        doc.text(notesLines, margin, margin + 19);
+        notesLines.forEach((ln, li) => {
+          doc.text(ln, nx, margin + 4.5 + li * 4, { align: "right" });
+        });
       }
-      const rule = margin + 17 + notesLines.length * 4;
+
+      const rule = margin + headerH - 4;
       doc.setDrawColor(220, 216, 208);
       doc.line(margin, rule, pageW - margin, rule);
     } else {
@@ -419,6 +442,7 @@ export async function exportSequenceGridPdf(
       doc.line(margin, margin + 4, pageW - margin, margin + 4);
     }
   }
+
 
   let page = 1;
   drawHeader(page);
