@@ -125,7 +125,7 @@ export function pageSize(format: PdfFormat) {
     : { w: 210, h: 297, orientation: "portrait" as const, spec: "a4" as const };
 }
 
-const BRAND = "VONA Sequence Designer";
+
 const INSTAGRAM = "Instagram: @vonasequencedesigner";
 
 export async function exportSequencePdf(
