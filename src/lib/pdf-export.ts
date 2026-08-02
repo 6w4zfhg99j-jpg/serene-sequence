@@ -116,11 +116,11 @@ async function loadImageAsDataUrl(url: string): Promise<LoadedImage | null> {
 
 
 export type PdfFormat = "a4" | "screen";
-/** Cards per row. A4 supports 5 or 7; screen supports 7 or 10. */
-export type PdfColumns = 5 | 7 | 10;
+/** Cards per row. A4 supports 3 or 5; screen supports 7 or 10. */
+export type PdfColumns = 3 | 5 | 7 | 10;
 
 export const COLUMN_OPTIONS: Record<PdfFormat, PdfColumns[]> = {
-  a4: [5, 7],
+  a4: [5, 3],
   screen: [7, 10],
 };
 
