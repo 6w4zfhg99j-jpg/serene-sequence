@@ -422,79 +422,64 @@ export async function exportSequenceGridPdf(
 
 
 
-  function drawHeader(page: number) {
-    if (page === 1) {
-      doc.setFont("times", "italic");
-      doc.setFontSize(12);
-      doc.setTextColor(ink);
-      doc.text("VONA", margin, margin);
-      const vonaW = doc.getTextWidth("VONA");
+  function drawHeader() {
+    doc.setFont("times", "italic");
+    doc.setFontSize(12);
+    doc.setTextColor(ink);
+    doc.text("VONA", margin, margin);
+    const vonaW = doc.getTextWidth("VONA");
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9.5);
+    doc.setTextColor(muted);
+    doc.text("SEQUENCE DESIGNER", margin + vonaW + 2, margin);
+
+    doc.setFont("times", "italic");
+    doc.setFontSize(20);
+    doc.setTextColor(ink);
+    doc.text(seq.title, margin, margin + 10);
+
+    const totalDur = seq.items.reduce(
+      (s, it) => s + (it.duration_seconds ?? it.pose.duration_seconds ?? 0),
+      0
+    );
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8.5);
+    doc.setTextColor(muted);
+    const meta = [
+      `${seq.items.length} poses`,
+      formatDuration(totalDur),
+      seq.level.replace("-", " "),
+      seq.tags.map((t) => `#${t.name}`).join("  "),
+    ]
+      .filter(Boolean)
+      .join("   ·   ");
+    doc.text(meta, margin, margin + 15);
+
+    if (notesLines.length) {
+      const nx = pageW - margin;
       doc.setFont("helvetica", "normal");
-      doc.setFontSize(9.5);
+      doc.setFontSize(7);
       doc.setTextColor(muted);
-      doc.text("SEQUENCE DESIGNER", margin + vonaW + 2, margin);
-
-      doc.setFont("times", "italic");
-      doc.setFontSize(20);
-      doc.setTextColor(ink);
-      doc.text(seq.title, margin, margin + 10);
-
-      const totalDur = seq.items.reduce(
-        (s, it) => s + (it.duration_seconds ?? it.pose.duration_seconds ?? 0),
-        0
-      );
-      doc.setFont("helvetica", "normal");
+      doc.text("PRACTICE NOTES", nx, margin, { align: "right" });
       doc.setFontSize(8.5);
-      doc.setTextColor(muted);
-      const meta = [
-        `${seq.items.length} poses`,
-        formatDuration(totalDur),
-        seq.level.replace("-", " "),
-        seq.tags.map((t) => `#${t.name}`).join("  "),
-      ]
-        .filter(Boolean)
-        .join("   ·   ");
-      doc.text(meta, margin, margin + 15);
-
-      if (notesLines.length) {
-        const nx = pageW - margin;
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(7);
-        doc.setTextColor(muted);
-        doc.text("PRACTICE NOTES", nx, margin, { align: "right" });
-        doc.setFontSize(8.5);
-        doc.setTextColor(ink);
-        notesLines.forEach((ln, li) => {
-          doc.text(ln, nx, margin + 4.5 + li * 4, { align: "right" });
-        });
-      }
-
-      const rule = margin + headerH - 4;
-      doc.setDrawColor(220, 216, 208);
-      doc.line(margin, rule, pageW - margin, rule);
-    } else {
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(8);
-      doc.setTextColor(muted);
-      doc.text(seq.title, margin, margin + 2);
-      doc.setDrawColor(230, 226, 218);
-      doc.line(margin, margin + 4, pageW - margin, margin + 4);
+      doc.setTextColor(ink);
+      notesLines.forEach((ln, li) => {
+        doc.text(ln, nx, margin + 4.5 + li * 4, { align: "right" });
+      });
     }
+
+    const rule = margin + headerH - 4;
+    doc.setDrawColor(220, 216, 208);
+    doc.line(margin, rule, pageW - margin, rule);
   }
 
 
-  let page = 1;
-  drawHeader(page);
+  drawHeader();
   let y = firstTop;
   let col = 0;
 
   for (let i = 0; i < seq.items.length; i++) {
-    if (col === 0 && y + cardH > pageH - margin - footerH) {
-      doc.addPage();
-      page += 1;
-      drawHeader(page);
-      y = restTop;
-    }
+
 
     const it = seq.items[i];
     const x = margin + col * (cardW + gap);
