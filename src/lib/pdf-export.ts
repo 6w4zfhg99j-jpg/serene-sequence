@@ -116,21 +116,35 @@ async function loadImageAsDataUrl(url: string): Promise<LoadedImage | null> {
 
 
 export type PdfLayout = "list" | "grid";
+export type PdfFormat = "a4" | "screen";
+
+/** Page geometry per export format. Screen = 16:9 landscape for laptops/tablets. */
+export function pageSize(format: PdfFormat) {
+  return format === "screen"
+    ? { w: 297, h: 167, orientation: "landscape" as const, spec: [297, 167] as [number, number] }
+    : { w: 210, h: 297, orientation: "portrait" as const, spec: "a4" as const };
+}
 
 const BRAND = "VONA Sequence Designer";
 const INSTAGRAM = "Instagram: @vonasequencedesigner";
 
 export async function exportSequencePdf(
   seq: Sequence,
-  opts: { includeNotes: boolean; layout?: PdfLayout }
+  opts: { includeNotes: boolean; layout?: PdfLayout; format?: PdfFormat }
 ) {
+  const format = opts.format ?? "a4";
   if ((opts.layout ?? "list") === "grid") {
-    return exportSequenceGridPdf(seq, { includeNotes: opts.includeNotes });
+    return exportSequenceGridPdf(seq, { includeNotes: opts.includeNotes, format });
   }
-  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const page = pageSize(format);
+  const doc = new jsPDF({
+    unit: "mm",
+    orientation: page.orientation,
+    format: page.spec,
+  });
 
-  const pageW = 210;
-  const pageH = 297;
+  const pageW = page.w;
+  const pageH = page.h;
   const margin = 16;
   const ink = "#2a2620";
   const muted = "#6b665e";
@@ -301,12 +315,19 @@ export async function exportSequencePdf(
 
 export async function exportSequenceGridPdf(
   seq: Sequence,
-  opts: { includeNotes?: boolean } = {}
+  opts: { includeNotes?: boolean; format?: PdfFormat } = {}
 ) {
   const withNotes = opts.includeNotes !== false;
-  const doc = new jsPDF({ unit: "mm", format: "a4" });
-  const pageW = 210;
-  const pageH = 297;
+  const format = opts.format ?? "a4";
+  const isScreen = format === "screen";
+  const page = pageSize(format);
+  const doc = new jsPDF({
+    unit: "mm",
+    orientation: page.orientation,
+    format: page.spec,
+  });
+  const pageW = page.w;
+  const pageH = page.h;
   const margin = 12;
   const ink = "#2a2620";
   const muted = "#6b665e";
@@ -328,9 +349,9 @@ export async function exportSequenceGridPdf(
     ).map(async (u) => loaded.set(u, await loadImageAsDataUrl(u)))
   );
 
-  // Grid metrics
-  const cols = 5;
-  const gap = 4;
+  // Grid metrics — screen format uses fewer, larger cards
+  const cols = isScreen ? 4 : 5;
+  const gap = isScreen ? 6 : 4;
   const cardW = (pageW - margin * 2 - gap * (cols - 1)) / cols;
   const imgH = cardW;
   const hasNotes = withNotes && seq.items.some((it) => !!it.notes);
@@ -449,7 +470,7 @@ export async function exportSequenceGridPdf(
 
     // Name
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(7.5);
+    doc.setFontSize(isScreen ? 9 : 7.5);
     doc.setTextColor(ink);
     const nameLines = doc
       .splitTextToSize(it.pose.name, cardW - 1)
