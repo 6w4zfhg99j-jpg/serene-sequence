@@ -358,10 +358,10 @@ export async function exportSequenceGridPdf(
   // Grid metrics — screen format is a teaching board: comfortable cards
   // sized so ~4 rows fit on one landscape page.
   const hasNotes = withNotes && seq.items.some((it) => !!it.notes);
-  const cols = isScreen ? 6 : 5;
-  const gap = isScreen ? 4 : 4;
+  const cols = isScreen ? 10 : 5;
+  const gap = isScreen ? 3 : 4;
   const cardW = (pageW - margin * 2 - gap * (cols - 1)) / cols;
-  const labelH = isScreen ? (hasNotes ? 11 : 7) : hasNotes ? 16 : 9;
+  const labelH = isScreen ? (hasNotes ? 10 : 7) : hasNotes ? 16 : 9;
 
   // Practice notes live in the upper-right corner, clear of the sequence grid.
   const notesW = (pageW - margin * 2) * 0.38;
