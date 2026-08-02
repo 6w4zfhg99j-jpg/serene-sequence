@@ -566,7 +566,7 @@ function SequenceRow({
       style={style}
       className="group rounded-lg border border-line bg-background"
     >
-      <div className="flex items-center gap-3 p-2.5">
+      <div className="flex items-start gap-3 p-2.5">
         <button
           className="cursor-grab touch-none text-ink-subtle hover:text-ink"
           {...attributes}
