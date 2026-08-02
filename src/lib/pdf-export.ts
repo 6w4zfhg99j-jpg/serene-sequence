@@ -458,11 +458,23 @@ export async function exportSequenceGridPdf(seq: Sequence) {
     const bits: string[] = [];
     if (dur) bits.push(formatDuration(dur));
     if (it.side) bits.push(it.side);
+    let ty = y + imgH + 3.5 + nameLines.length * 3;
     if (bits.length) {
       doc.setFontSize(6.5);
       doc.setTextColor(muted);
-      doc.text(bits.join(" · "), x + cardW / 2, y + imgH + 3.5 + nameLines.length * 3, {
-        align: "center",
+      doc.text(bits.join(" · "), x + cardW / 2, ty, { align: "center" });
+      ty += 2.6;
+    }
+
+    // Pose note — small, light grey, directly under the name
+    if (opts.includeNotes !== false && it.notes) {
+      doc.setFontSize(5.8);
+      doc.setTextColor(150, 146, 138);
+      const noteLines = doc
+        .splitTextToSize(it.notes, cardW - 1)
+        .slice(0, 3) as string[];
+      noteLines.forEach((ln, li) => {
+        doc.text(ln, x + cardW / 2, ty + li * 2.3, { align: "center" });
       });
     }
 
@@ -471,6 +483,7 @@ export async function exportSequenceGridPdf(seq: Sequence) {
       col = 0;
       y += cardH + gap;
     }
+
   }
 
   const pageCount = doc.getNumberOfPages();
