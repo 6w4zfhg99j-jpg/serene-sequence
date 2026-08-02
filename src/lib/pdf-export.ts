@@ -542,10 +542,11 @@ export async function exportSequenceGridPdf(
     const it = seq.items[i];
     const x = margin + col * (cardW + gap);
 
-    // Image box
+    // Image box — rounded card matching the app's card style
+    const radius = cardRadius(Math.min(cardW, imgH));
     doc.setDrawColor(230, 226, 218);
     doc.setFillColor(250, 249, 246);
-    doc.rect(x, y, cardW, imgH, "FD");
+    doc.roundedRect(x, y, cardW, imgH, radius, radius, "FD");
 
     const url = resolve(it.pose.image_url);
     if (url) {
@@ -561,20 +562,23 @@ export async function exportSequenceGridPdf(
           h = boxH;
           w = boxH * ratio;
         }
-        try {
-          doc.addImage(
-            img.dataUrl,
-            img.format,
-            x + (cardW - w) / 2,
-            y + (imgH - h) / 2,
-            w,
-            h
-          );
-        } catch (err) {
-          console.error("[pdf] failed to embed image", url, err);
-        }
+        withRoundedClip(doc, x, y, cardW, imgH, radius, () => {
+          try {
+            doc.addImage(
+              img.dataUrl,
+              img.format,
+              x + (cardW - w) / 2,
+              y + (imgH - h) / 2,
+              w,
+              h
+            );
+          } catch (err) {
+            console.error("[pdf] failed to embed image", url, err);
+          }
+        });
       }
     }
+
 
     // Index badge
     doc.setFont("times", "italic");
