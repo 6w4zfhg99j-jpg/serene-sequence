@@ -126,4 +126,15 @@ export const uk: Dict = {
   "settings.language": "Мова",
   "settings.languageHint": "Оберіть мову інтерфейсу застосунку.",
   "settings.languageSaved": "Мову інтерфейсу оновлено",
+
+  // About
+  "about.eyebrow": "Про застосунок",
+  "about.title": "Про VONA",
+  "about.edit": "Редагувати",
+  "about.save": "Зберегти",
+  "about.cancel": "Скасувати",
+  "about.addPhoto": "Додати фото",
+  "about.removePhoto": "Видалити фото",
+  "about.photoPlaceholder": "Додати фото",
+  "about.photoHint": "Завантажені зображення з'являться тут.",
 };

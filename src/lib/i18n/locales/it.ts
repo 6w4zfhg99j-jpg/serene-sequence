@@ -125,4 +125,15 @@ export const it: Dict = {
   "settings.language": "Lingua",
   "settings.languageHint": "Scegli la lingua dell'interfaccia.",
   "settings.languageSaved": "Lingua dell'interfaccia aggiornata",
+
+  // About
+  "about.eyebrow": "Informazioni",
+  "about.title": "Informazioni su VONA",
+  "about.edit": "Modifica",
+  "about.save": "Salva",
+  "about.cancel": "Annulla",
+  "about.addPhoto": "Aggiungi foto",
+  "about.removePhoto": "Rimuovi foto",
+  "about.photoPlaceholder": "Aggiungi foto",
+  "about.photoHint": "Le immagini caricate appariranno qui.",
 };

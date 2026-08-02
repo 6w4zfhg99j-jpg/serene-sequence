@@ -134,6 +134,17 @@ export const en = {
   "settings.language": "Language",
   "settings.languageHint": "Choose the language of the app interface.",
   "settings.languageSaved": "Interface language updated",
+
+  // About
+  "about.eyebrow": "About the app",
+  "about.title": "About VONA",
+  "about.edit": "Edit",
+  "about.save": "Save",
+  "about.cancel": "Cancel",
+  "about.addPhoto": "Add photo",
+  "about.removePhoto": "Remove photo",
+  "about.photoPlaceholder": "Add photos",
+  "about.photoHint": "Images you upload appear here.",
 } as const;
 
 export type Dict = Record<keyof typeof en, string>;

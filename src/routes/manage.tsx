@@ -33,6 +33,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LanguageSettings } from "@/components/LanguageSettings";
+import { AboutSection } from "@/components/AboutSection";
+
 import { useT } from "@/lib/i18n";
 import { useCategoryLabel } from "@/lib/i18n/categories";
 
@@ -78,9 +80,15 @@ function ManagePage() {
         <CategoriesPanel />
         <TagsPanel />
       </div>
+
+      <div className="mt-14">
+        <AboutSection />
+      </div>
     </div>
   );
 }
+
+
 
 /* ------------------------------------------------------------------ */
 
