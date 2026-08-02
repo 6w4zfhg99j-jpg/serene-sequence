@@ -1,5 +1,6 @@
 import { jsPDF } from "jspdf";
 import { getSignedImageUrls, formatDuration, type Sequence } from "@/lib/yoga-api";
+import { localBridge } from "@/lib/local-bridge";
 
 /** Paths that the browser/Electron renderer can load directly. */
 function isDirectUrl(p: string): boolean {
@@ -27,78 +28,92 @@ type LoadedImage = { dataUrl: string; format: "PNG" | "JPEG"; w: number; h: numb
 
 const imageCache = new Map<string, LoadedImage | null>();
 
-function decode(src: string): Promise<HTMLImageElement | null> {
-  return new Promise((resolve) => {
+function decode(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
     const img = new Image();
-    img.crossOrigin = "anonymous";
     img.onload = () => resolve(img);
-    img.onerror = () => resolve(null);
+    img.onerror = () =>
+      reject(new Error(`image decode failed (${src.slice(0, 64)}…)`));
     img.src = src;
   });
 }
 
+/** Turns a Blob into a data: URL. */
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(fr.result as string);
+    fr.onerror = () => reject(fr.error ?? new Error("FileReader failed"));
+    fr.readAsDataURL(blob);
+  });
+}
+
 /**
- * Loads an image (http, data:, or Electron local://) and re-encodes it through
- * a canvas to PNG so jsPDF always receives a format it can embed. Awaiting the
- * decode guarantees the bitmap is ready before it is drawn into the PDF.
+ * Produces a data: URL for any image source the app uses.
+ *
+ * Electron: `local://` photos are read straight off disk through the main
+ * process. The renderer can display them via <img>, but `fetch()` on the
+ * custom scheme can be blocked by CSP — which is exactly why exported PDFs
+ * came out with empty boxes. Reading through IPC removes that dependency and
+ * also avoids canvas tainting.
+ *
+ * Web: signed/remote URLs are fetched and inlined.
  */
+async function toDataUrl(url: string): Promise<string> {
+  if (url.startsWith("data:")) return url;
+
+  const bridge = localBridge();
+  if (url.startsWith("local://") && bridge?.images.readDataUrl) {
+    return bridge.images.readDataUrl(url);
+  }
+
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`fetch ${url} → HTTP ${res.status}`);
+  return blobToDataUrl(await res.blob());
+}
+
+/** Loads and decodes an image so jsPDF receives valid, correctly typed data. */
 async function loadImageAsDataUrl(url: string): Promise<LoadedImage | null> {
   if (imageCache.has(url)) return imageCache.get(url) ?? null;
   let result: LoadedImage | null = null;
   try {
-    let src = url;
-    if (!url.startsWith("data:")) {
-      // fetch() works for http and for the privileged local:// scheme
-      // (registered with supportFetchAPI) and sidesteps canvas tainting.
-      try {
-        const res = await fetch(url);
-        if (res.ok) {
-          const blob = await res.blob();
-          src = await new Promise<string>((resolve, reject) => {
-            const fr = new FileReader();
-            fr.onload = () => resolve(fr.result as string);
-            fr.onerror = reject;
-            fr.readAsDataURL(blob);
-          });
-        }
-      } catch {
-        // fall back to loading the URL directly in an <img>
-      }
+    const dataUrl = await toDataUrl(url);
+    const img = await decode(dataUrl);
+    if (!img.naturalWidth || !img.naturalHeight) {
+      throw new Error(`image has zero dimensions: ${url}`);
     }
-    const img = await decode(src);
-    if (img && img.naturalWidth > 0) {
+    const isPng = dataUrl.startsWith("data:image/png");
+    const isJpeg = /^data:image\/jpe?g/.test(dataUrl);
+    if (isPng || isJpeg) {
+      result = {
+        dataUrl,
+        format: isPng ? "PNG" : "JPEG",
+        w: img.naturalWidth,
+        h: img.naturalHeight,
+      };
+    } else {
+      // webp/gif/etc — re-encode to PNG, which jsPDF can embed.
       const canvas = document.createElement("canvas");
       canvas.width = img.naturalWidth;
       canvas.height = img.naturalHeight;
       const ctx = canvas.getContext("2d");
-      if (ctx) {
-        ctx.drawImage(img, 0, 0);
-        try {
-          result = {
-            dataUrl: canvas.toDataURL("image/png"),
-            format: "PNG",
-            w: img.naturalWidth,
-            h: img.naturalHeight,
-          };
-        } catch {
-          // tainted canvas — use the source data directly if it is a data URL
-          if (src.startsWith("data:")) {
-            result = {
-              dataUrl: src,
-              format: src.startsWith("data:image/png") ? "PNG" : "JPEG",
-              w: img.naturalWidth,
-              h: img.naturalHeight,
-            };
-          }
-        }
-      }
+      if (!ctx) throw new Error("2d canvas context unavailable");
+      ctx.drawImage(img, 0, 0);
+      result = {
+        dataUrl: canvas.toDataURL("image/png"),
+        format: "PNG",
+        w: img.naturalWidth,
+        h: img.naturalHeight,
+      };
     }
-  } catch {
+  } catch (err) {
+    console.error("[pdf] could not load image", url, err);
     result = null;
   }
   imageCache.set(url, result);
   return result;
 }
+
 
 export type PdfLayout = "list" | "grid";
 
