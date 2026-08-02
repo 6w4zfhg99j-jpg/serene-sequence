@@ -328,7 +328,7 @@ export async function exportSequenceGridPdf(
   });
   const pageW = geom.w;
   const pageH = geom.h;
-  const margin = 12;
+  const margin = isScreen ? 9 : 12;
   const ink = "#2a2620";
   const muted = "#6b665e";
 
@@ -349,22 +349,30 @@ export async function exportSequenceGridPdf(
     ).map(async (u) => loaded.set(u, await loadImageAsDataUrl(u)))
   );
 
-  // Grid metrics — screen format uses fewer, larger cards
-  const cols = isScreen ? 4 : 5;
-  const gap = isScreen ? 6 : 4;
-  const cardW = (pageW - margin * 2 - gap * (cols - 1)) / cols;
-  const imgH = cardW;
+  // Grid metrics — screen format is a compact teaching board: more, smaller
+  // cards sized so ~5 rows fit on one landscape page.
   const hasNotes = withNotes && seq.items.some((it) => !!it.notes);
-  const labelH = isScreen ? (hasNotes ? 20 : 12) : hasNotes ? 16 : 9;
-  const cardH = imgH + labelH;
+  const cols = isScreen ? 7 : 5;
+  const gap = isScreen ? 3 : 4;
+  const cardW = (pageW - margin * 2 - gap * (cols - 1)) / cols;
+  const labelH = isScreen ? (hasNotes ? 10 : 6) : hasNotes ? 16 : 9;
 
   const notesLines = seq.practice_notes
     ? (doc.splitTextToSize(seq.practice_notes, pageW - margin * 2) as string[])
     : [];
-  const headerH = 24 + notesLines.length * 4;
-  const footerH = 10;
+  const headerH = (isScreen ? 19 : 24) + notesLines.length * 4;
+  const footerH = isScreen ? 8 : 10;
   const firstTop = margin + headerH;
   const restTop = margin + 6;
+
+  let imgH = cardW;
+  if (isScreen) {
+    const targetRows = 5;
+    const avail = pageH - firstTop - margin - footerH;
+    imgH = Math.max(12, (avail - gap * (targetRows - 1)) / targetRows - labelH);
+  }
+  const cardH = imgH + labelH;
+
 
   function drawHeader(page: number) {
     if (page === 1) {
