@@ -137,17 +137,45 @@ export async function exportSequencePdf(
     return exportSequenceGridPdf(seq, { includeNotes: opts.includeNotes, format });
   }
   const page = pageSize(format);
-  const doc = new jsPDF({
+  const pageW = page.w;
+  const margin = 16;
+  const ink = "#2a2620";
+  const muted = "#6b665e";
+  const rowH = 38;
+  const imgSize = 32;
+
+  // Measure the header first so the document can be created as ONE continuous
+  // page tall enough for the whole practice (no page breaks).
+  const measure = new jsPDF({
     unit: "mm",
     orientation: page.orientation,
     format: page.spec,
   });
+  measure.setFont("helvetica", "normal");
+  measure.setFontSize(10);
+  const descLineCount = seq.description
+    ? (measure.splitTextToSize(seq.description, pageW - margin * 2) as string[]).length
+    : 0;
+  const pnLineCount = seq.practice_notes
+    ? (measure.splitTextToSize(seq.practice_notes, pageW - margin * 2) as string[]).length
+    : 0;
+  const headerBottom =
+    margin +
+    9 +
+    6 +
+    (descLineCount ? 7 + descLineCount * 5 : 0) +
+    (pnLineCount ? 6 + pnLineCount * 5 : 0) +
+    6;
+  const pageH = Math.max(
+    page.h,
+    headerBottom + 8 + seq.items.length * rowH + 16
+  );
 
-  const pageW = page.w;
-  const pageH = page.h;
-  const margin = 16;
-  const ink = "#2a2620";
-  const muted = "#6b665e";
+  const doc = new jsPDF({
+    unit: "mm",
+    orientation: pageH >= pageW ? "portrait" : "landscape",
+    format: [pageW, pageH],
+  });
 
   // Resolve every image URL, then fully preload the bitmaps before drawing.
   const resolve = await resolveExportUrls(seq.items.map((it) => it.pose.image_url));
