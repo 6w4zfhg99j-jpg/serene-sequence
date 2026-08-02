@@ -39,7 +39,6 @@ import {
   fetchPoses,
   fetchSequence,
   fetchTags,
-  formatDuration,
   removeSequenceItem,
   reorderSequenceItems,
   setSequenceTags,
@@ -71,7 +70,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import {
   exportSequencePdf,
-  type PdfLayout,
+  type PdfColumns,
+  COLUMN_OPTIONS,
+  defaultColumns,
   type PdfFormat,
 } from "@/lib/pdf-export";
 import { useT } from "@/lib/i18n";
@@ -161,8 +162,8 @@ function SequenceEditor() {
 
   const [showExport, setShowExport] = useState(false);
   const [includeNotes, setIncludeNotes] = useState(true);
-  const [layout, setLayout] = useState<PdfLayout>("grid");
   const [pdfFormat, setPdfFormat] = useState<PdfFormat>("a4");
+  const [pdfColumns, setPdfColumns] = useState<PdfColumns>(defaultColumns("a4"));
   const [exporting, setExporting] = useState(false);
 
 
@@ -189,16 +190,15 @@ function SequenceEditor() {
     reorder.mutate(newIds);
   }
 
-  const totalDuration = seq.items.reduce(
-    (s, it) => s + (it.duration_seconds ?? it.pose.duration_seconds ?? 0),
-    0
-  );
-
   async function doExport() {
     if (!seq) return;
     setExporting(true);
     try {
-      await exportSequencePdf(seq, { includeNotes, layout, format: pdfFormat });
+      await exportSequencePdf(seq, {
+        includeNotes,
+        format: pdfFormat,
+        columns: pdfColumns,
+      });
       setShowExport(false);
     } catch (e: any) {
       toast.error(e.message ?? t("sequence.exportFailed"));
@@ -285,10 +285,6 @@ function SequenceEditor() {
               ))}
             </SelectContent>
           </Select>
-        </div>
-        <div>
-          <span className="label-eyebrow mr-2">Total</span>
-          <span className="font-medium">{formatDuration(totalDuration)}</span>
         </div>
         <div>
           <span className="label-eyebrow mr-2">Poses</span>
@@ -417,7 +413,10 @@ function SequenceEditor() {
                 <button
                   key={val}
                   type="button"
-                  onClick={() => setPdfFormat(val)}
+                  onClick={() => {
+                    setPdfFormat(val);
+                    setPdfColumns(defaultColumns(val));
+                  }}
                   aria-pressed={pdfFormat === val}
                   className={
                     "flex flex-col items-center gap-2 rounded-lg border p-3 text-center transition-colors " +
@@ -456,37 +455,37 @@ function SequenceEditor() {
               ))}
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              {(
-                [
-                  ["grid", t("sequence.layoutGrid"), t("sequence.layoutGridHint")],
-                  ["list", t("sequence.layoutList"), t("sequence.layoutListHint")],
-                ] as const
-              ).map(([val, title, sub]) => (
-                <button
-                  key={val}
-                  onClick={() => setLayout(val)}
-                  className={
-                    "rounded-lg border p-3 text-left transition-colors " +
-                    (layout === val
-                      ? "border-accent bg-accent/10"
-                      : "border-line hover:border-ink-muted")
-                  }
-                >
-                  <span className="block text-sm font-medium">{title}</span>
-                  <span className="mt-0.5 block text-xs text-ink-muted">{sub}</span>
-                </button>
-              ))}
+            <div>
+              <p className="mb-2 text-sm font-medium">Asanas per row</p>
+              <div className="grid grid-cols-2 gap-2">
+                {COLUMN_OPTIONS[pdfFormat].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setPdfColumns(n)}
+                    aria-pressed={pdfColumns === n}
+                    className={
+                      "rounded-lg border p-3 text-left transition-colors " +
+                      (pdfColumns === n
+                        ? "border-accent bg-accent/10"
+                        : "border-line hover:border-ink-muted")
+                    }
+                  >
+                    <span className="block text-sm font-medium">{n} per row</span>
+                    <span className="mt-0.5 block text-xs text-ink-muted">
+                      {n >= 10 ? "Maximum density" : n >= 7 ? "Balanced" : "Larger cards"}
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
-            {layout === "list" && (
-              <label className="flex items-center gap-2">
-                <Checkbox
-                  checked={includeNotes}
-                  onCheckedChange={(v) => setIncludeNotes(!!v)}
-                />
-                <span>{t("sequence.includeNotes")}</span>
-              </label>
-            )}
+            <label className="flex items-center gap-2">
+              <Checkbox
+                checked={includeNotes}
+                onCheckedChange={(v) => setIncludeNotes(!!v)}
+              />
+              <span>{t("sequence.includeNotes")}</span>
+            </label>
             <p className="text-xs text-ink-muted">
               {pdfFormat === "a4"
                 ? "Formatted for A4 with clean margins. Prints beautifully."
@@ -551,14 +550,7 @@ function SequenceRow({
 
   const [openNotes, setOpenNotes] = useState(false);
   const [localNotes, setLocalNotes] = useState(item.notes ?? "");
-  const [localDur, setLocalDur] = useState(
-    item.duration_seconds ? String(item.duration_seconds) : ""
-  );
   useEffect(() => setLocalNotes(item.notes ?? ""), [item.notes]);
-  useEffect(
-    () => setLocalDur(item.duration_seconds ? String(item.duration_seconds) : ""),
-    [item.duration_seconds]
-  );
 
   return (
     <li
@@ -601,7 +593,7 @@ function SequenceRow({
           onClick={() => setOpenNotes((v) => !v)}
           className="rounded px-2 py-1 text-xs text-ink-muted hover:bg-surface hover:text-ink"
         >
-          {formatDuration(item.duration_seconds ?? item.pose.duration_seconds)}
+          {t("sequence.side")}
         </button>
         <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
           <Button variant="ghost" size="sm" onClick={onDuplicate} title={t("common.duplicate")}>
@@ -614,19 +606,7 @@ function SequenceRow({
       </div>
       {openNotes && (
         <div className="space-y-2 border-t border-line px-3 pb-3 pt-2">
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <Label className="text-xs">Duration (sec)</Label>
-              <Input
-                type="number"
-                value={localDur}
-                onChange={(e) => setLocalDur(e.target.value)}
-                onBlur={() =>
-                  onPatch({ duration_seconds: localDur ? Number(localDur) : null })
-                }
-                className="h-8"
-              />
-            </div>
+          <div className="grid grid-cols-1 gap-2">
             <div>
               <Label className="text-xs">{t("sequence.side")}</Label>
               <Select

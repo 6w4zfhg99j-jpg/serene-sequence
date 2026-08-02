@@ -87,10 +87,6 @@ export const it: Dict = {
   "sequence.sideLeft": "Sinistro",
   "sequence.export": "Esporta PDF",
   "sequence.exportFailed": "Esportazione fallita",
-  "sequence.layoutGrid": "Griglia compatta",
-  "sequence.layoutGridHint": "Miniature e nomi, riempie la pagina",
-  "sequence.layoutList": "Elenco dettagliato",
-  "sequence.layoutListHint": "Una posizione per riga con le indicazioni",
   "sequence.includeNotes": "Includi le note di ogni posizione",
 
   "pose.new": "Nuova posizione",

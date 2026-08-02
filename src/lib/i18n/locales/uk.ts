@@ -88,10 +88,6 @@ export const uk: Dict = {
   "sequence.sideLeft": "Ліва",
   "sequence.export": "Експорт у PDF",
   "sequence.exportFailed": "Не вдалося експортувати",
-  "sequence.layoutGrid": "Компактна сітка",
-  "sequence.layoutGridHint": "Мініатюри та назви, на всю сторінку",
-  "sequence.layoutList": "Докладний список",
-  "sequence.layoutListHint": "По одній асані в рядку з підказками",
   "sequence.includeNotes": "Додати нотатки до асан",
 
   "pose.new": "Нова асана",

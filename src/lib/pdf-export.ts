@@ -1,5 +1,5 @@
 import { jsPDF } from "jspdf";
-import { getSignedImageUrls, formatDuration, type Sequence } from "@/lib/yoga-api";
+import { getSignedImageUrls, type Sequence } from "@/lib/yoga-api";
 import { localBridge } from "@/lib/local-bridge";
 
 /** Paths that the browser/Electron renderer can load directly. */
@@ -115,8 +115,18 @@ async function loadImageAsDataUrl(url: string): Promise<LoadedImage | null> {
 }
 
 
-export type PdfLayout = "list" | "grid";
 export type PdfFormat = "a4" | "screen";
+/** Cards per row. A4 supports 5 or 7; screen supports 7 or 10. */
+export type PdfColumns = 5 | 7 | 10;
+
+export const COLUMN_OPTIONS: Record<PdfFormat, PdfColumns[]> = {
+  a4: [5, 7],
+  screen: [7, 10],
+};
+
+export function defaultColumns(format: PdfFormat): PdfColumns {
+  return format === "screen" ? 10 : 5;
+}
 
 /** Page geometry per export format. Screen = 16:9 landscape for laptops/tablets. */
 export function pageSize(format: PdfFormat) {
@@ -186,222 +196,14 @@ function withRoundedClip(
 
 export async function exportSequencePdf(
   seq: Sequence,
-  opts: { includeNotes: boolean; layout?: PdfLayout; format?: PdfFormat }
+  opts: { includeNotes?: boolean; format?: PdfFormat; columns?: PdfColumns } = {}
 ) {
-  const format = opts.format ?? "a4";
-  if ((opts.layout ?? "list") === "grid") {
-    return exportSequenceGridPdf(seq, { includeNotes: opts.includeNotes, format });
-  }
-  const page = pageSize(format);
-  const pageW = page.w;
-  const margin = 16;
-  const ink = "#2a2620";
-  const muted = "#6b665e";
-  const rowH = 38;
-  const imgSize = 32;
-
-  // Measure the header first so the document can be created as ONE continuous
-  // page tall enough for the whole practice (no page breaks).
-  const measure = new jsPDF({
-    unit: "mm",
-    orientation: page.orientation,
-    format: page.spec,
-  });
-  measure.setFont("helvetica", "normal");
-  measure.setFontSize(10);
-  const descLineCount = seq.description
-    ? (measure.splitTextToSize(seq.description, pageW - margin * 2) as string[]).length
-    : 0;
-  const pnLineCount = seq.practice_notes
-    ? (measure.splitTextToSize(seq.practice_notes, pageW - margin * 2) as string[]).length
-    : 0;
-  const headerBottom =
-    margin +
-    9 +
-    6 +
-    (descLineCount ? 7 + descLineCount * 5 : 0) +
-    (pnLineCount ? 6 + pnLineCount * 5 : 0) +
-    6;
-  const pageH = Math.max(
-    page.h,
-    headerBottom + 8 + seq.items.length * rowH + 16
-  );
-
-  const doc = new jsPDF({
-    unit: "mm",
-    orientation: pageH >= pageW ? "portrait" : "landscape",
-    format: [pageW, pageH],
-  });
-
-  // Resolve every image URL, then fully preload the bitmaps before drawing.
-  const resolve = await resolveExportUrls(seq.items.map((it) => it.pose.image_url));
-  for (const it of seq.items) {
-    if (it.pose.image_url && !resolve(it.pose.image_url)) {
-      console.error("[pdf] could not resolve image path", it.pose.image_url);
-    }
-  }
-  const loaded = new Map<string, LoadedImage | null>();
-  await Promise.all(
-    Array.from(
-      new Set(
-        seq.items
-          .map((it) => resolve(it.pose.image_url))
-          .filter((u): u is string => !!u)
-      )
-    ).map(async (u) => loaded.set(u, await loadImageAsDataUrl(u)))
-  );
-
-  // Header — brand line, practice name, meta, practice notes
-  let hy = margin;
-  doc.setFont("times", "italic");
-  doc.setFontSize(12);
-  doc.setTextColor(ink);
-  doc.text("VONA", margin, hy);
-  const vonaW = doc.getTextWidth("VONA");
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9.5);
-  doc.setTextColor(muted);
-  doc.text("SEQUENCE DESIGNER", margin + vonaW + 2, hy);
-
-
-  hy += 9;
-  doc.setTextColor(ink);
-  doc.setFont("times", "italic");
-  doc.setFontSize(28);
-  doc.text(seq.title, margin, hy);
-
-  hy += 6;
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-  doc.setTextColor(muted);
-  const totalDur = seq.items.reduce(
-    (s, it) => s + (it.duration_seconds ?? it.pose.duration_seconds ?? 0),
-    0
-  );
-  const meta = [
-    `${seq.items.length} poses`,
-    formatDuration(totalDur),
-    seq.level.replace("-", " "),
-    seq.tags.map((t) => `#${t.name}`).join("  "),
-  ]
-    .filter(Boolean)
-    .join("   ·   ");
-  doc.text(meta, margin, hy);
-
-  if (seq.description) {
-    hy += 7;
-    doc.setFontSize(10);
-    doc.setTextColor(ink);
-    const lines = doc.splitTextToSize(seq.description, pageW - margin * 2);
-    doc.text(lines, margin, hy);
-    hy += lines.length * 5;
-  }
-
-  if (seq.practice_notes) {
-    hy += 6;
-    doc.setFontSize(10);
-    doc.setTextColor(ink);
-    const noteLines = doc.splitTextToSize(seq.practice_notes, pageW - margin * 2);
-    doc.text(noteLines, margin, hy);
-    hy += noteLines.length * 5;
-  }
-
-  hy += 6;
-  doc.setDrawColor(220, 216, 208);
-  doc.line(margin, hy, pageW - margin, hy);
-
-  let y = hy + 8;
-
-  for (let i = 0; i < seq.items.length; i++) {
-    const it = seq.items[i];
-
-
-    // Number
-    doc.setFont("times", "italic");
-    doc.setFontSize(16);
-    doc.setTextColor(muted);
-    doc.text(String(i + 1).padStart(2, "0"), margin, y + 8);
-
-    // Image — rounded card, image clipped inside the corners
-    const url = resolve(it.pose.image_url);
-    const x = margin + 12;
-    const radius = cardRadius(imgSize);
-    doc.setFillColor(250, 249, 246);
-    doc.roundedRect(x, y, imgSize, imgSize, radius, radius, "F");
-    if (url) {
-      const img = loaded.get(url) ?? null;
-      if (img) {
-        const ratio = img.w / img.h;
-        let w = imgSize;
-        let h = imgSize;
-        if (ratio > 1) h = imgSize / ratio;
-        else w = imgSize * ratio;
-        withRoundedClip(doc, x, y, imgSize, imgSize, radius, () => {
-          try {
-            doc.addImage(
-              img.dataUrl,
-              img.format,
-              x + (imgSize - w) / 2,
-              y + (imgSize - h) / 2,
-              w,
-              h
-            );
-          } catch (err) {
-            console.error("[pdf] failed to embed image", url, err);
-          }
-        });
-      }
-    }
-    doc.setDrawColor(230, 226, 218);
-    doc.roundedRect(x, y, imgSize, imgSize, radius, radius, "S");
-
-
-    // Text
-    const tx = x + imgSize + 6;
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(12);
-    doc.setTextColor(ink);
-    doc.text(it.pose.name, tx, y + 6);
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.setTextColor(muted);
-    if (it.pose.sanskrit_name) {
-      doc.text(it.pose.sanskrit_name, tx, y + 11);
-    }
-
-    const dur = it.duration_seconds ?? it.pose.duration_seconds;
-    const bits: string[] = [];
-    if (dur) bits.push(formatDuration(dur));
-    if (it.side) bits.push(it.side);
-    if (bits.length) {
-      doc.text(bits.join("  ·  "), tx, y + 16);
-    }
-
-    if (opts.includeNotes && it.notes) {
-      doc.setTextColor(ink);
-      doc.setFontSize(9);
-      const noteLines = doc.splitTextToSize(it.notes, pageW - margin - tx);
-      doc.text(noteLines.slice(0, 3), tx, y + 22);
-    }
-
-    y += rowH;
-  }
-
-  // Footer
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(8);
-  doc.setTextColor(muted);
-  doc.text(`${seq.title}`, margin, pageH - 8);
-  doc.text(INSTAGRAM, pageW / 2, pageH - 8, { align: "center" });
-
-
-  doc.save(`${seq.title.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}.pdf`);
+  return exportSequenceGridPdf(seq, opts);
 }
 
 export async function exportSequenceGridPdf(
   seq: Sequence,
-  opts: { includeNotes?: boolean; format?: PdfFormat } = {}
+  opts: { includeNotes?: boolean; format?: PdfFormat; columns?: PdfColumns } = {}
 ) {
   const withNotes = opts.includeNotes !== false;
   const format = opts.format ?? "a4";
@@ -439,10 +241,16 @@ export async function exportSequenceGridPdf(
   // Grid metrics — screen format is a teaching board: comfortable cards
   // sized so ~4 rows fit on one landscape page.
   const hasNotes = withNotes && seq.items.some((it) => !!it.notes);
-  const cols = isScreen ? 10 : 5;
-  const gap = isScreen ? 3 : 4;
+  const allowed = COLUMN_OPTIONS[format];
+  const cols = allowed.includes(opts.columns as PdfColumns)
+    ? (opts.columns as PdfColumns)
+    : defaultColumns(format);
+  // Denser grids need tighter gaps and smaller type to stay balanced.
+  const dense = cols >= 10;
+  const gap = dense ? 3 : isScreen ? 4 : cols >= 7 ? 3.5 : 4;
   const cardW = (pageW - margin * 2 - gap * (cols - 1)) / cols;
-  const labelH = isScreen ? (hasNotes ? 10 : 7) : hasNotes ? 16 : 9;
+  const scale = Math.min(1.25, Math.max(0.9, cardW / (isScreen ? 26 : 36)));
+  const labelH = (isScreen ? (hasNotes ? 10 : 7) : hasNotes ? 16 : 9) * (dense ? 1 : scale);
 
   // Practice notes live in the upper-right corner, clear of the sequence grid.
   const notesW = (pageW - margin * 2) * 0.38;
@@ -496,16 +304,11 @@ export async function exportSequenceGridPdf(
     doc.setTextColor(ink);
     doc.text(seq.title, margin, margin + 10);
 
-    const totalDur = seq.items.reduce(
-      (s, it) => s + (it.duration_seconds ?? it.pose.duration_seconds ?? 0),
-      0
-    );
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8.5);
     doc.setTextColor(muted);
     const meta = [
       `${seq.items.length} poses`,
-      formatDuration(totalDur),
       seq.level.replace("-", " "),
       seq.tags.map((t) => `#${t.name}`).join("  "),
     ]
@@ -587,9 +390,9 @@ export async function exportSequenceGridPdf(
     doc.text(String(i + 1).padStart(2, "0"), x + 1.2, y + (isScreen ? 3.6 : 4.5));
 
     // Name
-    const nameLead = isScreen ? 2.7 : 3;
+    const nameLead = (isScreen ? 2.7 : 3) * scale;
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(isScreen ? 7 : 7.5);
+    doc.setFontSize((isScreen ? 7 : 7.5) * scale);
     doc.setTextColor(ink);
     const nameLines = doc
       .splitTextToSize(it.pose.name, cardW - 1)
@@ -598,28 +401,24 @@ export async function exportSequenceGridPdf(
       doc.text(ln, x + cardW / 2, y + imgH + 3 + li * nameLead, { align: "center" });
     });
 
-    // Duration / side
-    const dur = it.duration_seconds ?? it.pose.duration_seconds;
-    const bits: string[] = [];
-    if (dur) bits.push(formatDuration(dur));
-    if (it.side) bits.push(it.side);
+    // Side marker (no durations — sequences focus on order and cues)
     let ty = y + imgH + 3 + nameLines.length * nameLead;
-    if (bits.length) {
-      doc.setFontSize(isScreen ? 5.8 : 6.5);
+    if (it.side) {
+      doc.setFontSize((isScreen ? 5.8 : 6.5) * scale);
       doc.setTextColor(muted);
-      doc.text(bits.join(" · "), x + cardW / 2, ty, { align: "center" });
-      ty += isScreen ? 2.3 : 2.6;
+      doc.text(it.side, x + cardW / 2, ty, { align: "center" });
+      ty += (isScreen ? 2.3 : 2.6) * scale;
     }
 
     // Pose note — small, light grey, directly under the name
     if (withNotes && it.notes) {
-      doc.setFontSize(isScreen ? 5.2 : 5.8);
+      doc.setFontSize((isScreen ? 5.2 : 5.8) * scale);
       doc.setTextColor(150, 146, 138);
       const noteLines = doc
         .splitTextToSize(it.notes, cardW - 1)
         .slice(0, isScreen ? 2 : 3) as string[];
       noteLines.forEach((ln, li) => {
-        doc.text(ln, x + cardW / 2, ty + li * (isScreen ? 2.1 : 2.3), { align: "center" });
+        doc.text(ln, x + cardW / 2, ty + li * (isScreen ? 2.1 : 2.3) * scale, { align: "center" });
       });
     }
 
