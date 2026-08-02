@@ -137,17 +137,45 @@ export async function exportSequencePdf(
     return exportSequenceGridPdf(seq, { includeNotes: opts.includeNotes, format });
   }
   const page = pageSize(format);
-  const doc = new jsPDF({
+  const pageW = page.w;
+  const margin = 16;
+  const ink = "#2a2620";
+  const muted = "#6b665e";
+  const rowH = 38;
+  const imgSize = 32;
+
+  // Measure the header first so the document can be created as ONE continuous
+  // page tall enough for the whole practice (no page breaks).
+  const measure = new jsPDF({
     unit: "mm",
     orientation: page.orientation,
     format: page.spec,
   });
+  measure.setFont("helvetica", "normal");
+  measure.setFontSize(10);
+  const descLineCount = seq.description
+    ? (measure.splitTextToSize(seq.description, pageW - margin * 2) as string[]).length
+    : 0;
+  const pnLineCount = seq.practice_notes
+    ? (measure.splitTextToSize(seq.practice_notes, pageW - margin * 2) as string[]).length
+    : 0;
+  const headerBottom =
+    margin +
+    9 +
+    6 +
+    (descLineCount ? 7 + descLineCount * 5 : 0) +
+    (pnLineCount ? 6 + pnLineCount * 5 : 0) +
+    6;
+  const pageH = Math.max(
+    page.h,
+    headerBottom + 8 + seq.items.length * rowH + 16
+  );
 
-  const pageW = page.w;
-  const pageH = page.h;
-  const margin = 16;
-  const ink = "#2a2620";
-  const muted = "#6b665e";
+  const doc = new jsPDF({
+    unit: "mm",
+    orientation: pageH >= pageW ? "portrait" : "landscape",
+    format: [pageW, pageH],
+  });
 
   // Resolve every image URL, then fully preload the bitmaps before drawing.
   const resolve = await resolveExportUrls(seq.items.map((it) => it.pose.image_url));
@@ -227,16 +255,10 @@ export async function exportSequencePdf(
   doc.line(margin, hy, pageW - margin, hy);
 
   let y = hy + 8;
-  const rowH = 38;
-  const imgSize = 32;
-
 
   for (let i = 0; i < seq.items.length; i++) {
     const it = seq.items[i];
-    if (y + rowH > pageH - margin) {
-      doc.addPage();
-      y = margin;
-    }
+
 
     // Number
     doc.setFont("times", "italic");
@@ -305,16 +327,12 @@ export async function exportSequencePdf(
   }
 
   // Footer
-  const pageCount = doc.getNumberOfPages();
-  for (let p = 1; p <= pageCount; p++) {
-    doc.setPage(p);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
-    doc.setTextColor(muted);
-    doc.text(`${seq.title}`, margin, pageH - 8);
-    doc.text(INSTAGRAM, pageW / 2, pageH - 8, { align: "center" });
-    doc.text(`${p} / ${pageCount}`, pageW - margin, pageH - 8, { align: "right" });
-  }
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(muted);
+  doc.text(`${seq.title}`, margin, pageH - 8);
+  doc.text(INSTAGRAM, pageW / 2, pageH - 8, { align: "center" });
+
 
   doc.save(`${seq.title.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}.pdf`);
 }
@@ -327,13 +345,14 @@ export async function exportSequenceGridPdf(
   const format = opts.format ?? "a4";
   const isScreen = format === "screen";
   const geom = pageSize(format);
-  const doc = new jsPDF({
+  const measure = new jsPDF({
     unit: "mm",
     orientation: geom.orientation,
     format: geom.spec,
   });
   const pageW = geom.w;
-  const pageH = geom.h;
+  const baseH = geom.h;
+
   const margin = isScreen ? 9 : 12;
   const ink = "#2a2620";
   const muted = "#6b665e";
@@ -365,97 +384,98 @@ export async function exportSequenceGridPdf(
 
   // Practice notes live in the upper-right corner, clear of the sequence grid.
   const notesW = (pageW - margin * 2) * 0.38;
+  measure.setFont("helvetica", "normal");
+  measure.setFontSize(8.5);
   const notesLines = seq.practice_notes
-    ? (doc.splitTextToSize(seq.practice_notes, notesW) as string[])
+    ? (measure.splitTextToSize(seq.practice_notes, notesW) as string[])
     : [];
   const notesBlockH = notesLines.length ? 4 + notesLines.length * 4 : 0;
   const headerH = Math.max(isScreen ? 19 : 24, notesBlockH + (isScreen ? 6 : 8));
   const footerH = isScreen ? 8 : 10;
   const firstTop = margin + headerH;
-  const restTop = margin + 6;
 
   let imgH = cardW;
   if (isScreen) {
     const targetRows = 4;
-    const avail = pageH - firstTop - margin - footerH;
+    const avail = baseH - firstTop - margin - footerH;
     imgH = Math.max(12, (avail - gap * (targetRows - 1)) / targetRows - labelH);
   }
   const cardH = imgH + labelH;
 
+  // One continuous page: extend the document height to fit every row.
+  const rows = Math.max(1, Math.ceil(seq.items.length / cols));
+  const pageH = Math.max(
+    baseH,
+    firstTop + rows * (cardH + gap) - gap + footerH + margin
+  );
 
-  function drawHeader(page: number) {
-    if (page === 1) {
-      doc.setFont("times", "italic");
-      doc.setFontSize(12);
-      doc.setTextColor(ink);
-      doc.text("VONA", margin, margin);
-      const vonaW = doc.getTextWidth("VONA");
+  const doc = new jsPDF({
+    unit: "mm",
+    orientation: pageH >= pageW ? "portrait" : "landscape",
+    format: [pageW, pageH],
+  });
+
+
+
+
+  function drawHeader() {
+    doc.setFont("times", "italic");
+    doc.setFontSize(12);
+    doc.setTextColor(ink);
+    doc.text("VONA", margin, margin);
+    const vonaW = doc.getTextWidth("VONA");
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9.5);
+    doc.setTextColor(muted);
+    doc.text("SEQUENCE DESIGNER", margin + vonaW + 2, margin);
+
+    doc.setFont("times", "italic");
+    doc.setFontSize(20);
+    doc.setTextColor(ink);
+    doc.text(seq.title, margin, margin + 10);
+
+    const totalDur = seq.items.reduce(
+      (s, it) => s + (it.duration_seconds ?? it.pose.duration_seconds ?? 0),
+      0
+    );
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8.5);
+    doc.setTextColor(muted);
+    const meta = [
+      `${seq.items.length} poses`,
+      formatDuration(totalDur),
+      seq.level.replace("-", " "),
+      seq.tags.map((t) => `#${t.name}`).join("  "),
+    ]
+      .filter(Boolean)
+      .join("   ·   ");
+    doc.text(meta, margin, margin + 15);
+
+    if (notesLines.length) {
+      const nx = pageW - margin;
       doc.setFont("helvetica", "normal");
-      doc.setFontSize(9.5);
+      doc.setFontSize(7);
       doc.setTextColor(muted);
-      doc.text("SEQUENCE DESIGNER", margin + vonaW + 2, margin);
-
-      doc.setFont("times", "italic");
-      doc.setFontSize(20);
-      doc.setTextColor(ink);
-      doc.text(seq.title, margin, margin + 10);
-
-      const totalDur = seq.items.reduce(
-        (s, it) => s + (it.duration_seconds ?? it.pose.duration_seconds ?? 0),
-        0
-      );
-      doc.setFont("helvetica", "normal");
+      doc.text("PRACTICE NOTES", nx, margin, { align: "right" });
       doc.setFontSize(8.5);
-      doc.setTextColor(muted);
-      const meta = [
-        `${seq.items.length} poses`,
-        formatDuration(totalDur),
-        seq.level.replace("-", " "),
-        seq.tags.map((t) => `#${t.name}`).join("  "),
-      ]
-        .filter(Boolean)
-        .join("   ·   ");
-      doc.text(meta, margin, margin + 15);
-
-      if (notesLines.length) {
-        const nx = pageW - margin;
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(7);
-        doc.setTextColor(muted);
-        doc.text("PRACTICE NOTES", nx, margin, { align: "right" });
-        doc.setFontSize(8.5);
-        doc.setTextColor(ink);
-        notesLines.forEach((ln, li) => {
-          doc.text(ln, nx, margin + 4.5 + li * 4, { align: "right" });
-        });
-      }
-
-      const rule = margin + headerH - 4;
-      doc.setDrawColor(220, 216, 208);
-      doc.line(margin, rule, pageW - margin, rule);
-    } else {
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(8);
-      doc.setTextColor(muted);
-      doc.text(seq.title, margin, margin + 2);
-      doc.setDrawColor(230, 226, 218);
-      doc.line(margin, margin + 4, pageW - margin, margin + 4);
+      doc.setTextColor(ink);
+      notesLines.forEach((ln, li) => {
+        doc.text(ln, nx, margin + 4.5 + li * 4, { align: "right" });
+      });
     }
+
+    const rule = margin + headerH - 4;
+    doc.setDrawColor(220, 216, 208);
+    doc.line(margin, rule, pageW - margin, rule);
   }
 
 
-  let page = 1;
-  drawHeader(page);
+  drawHeader();
   let y = firstTop;
   let col = 0;
 
   for (let i = 0; i < seq.items.length; i++) {
-    if (col === 0 && y + cardH > pageH - margin - footerH) {
-      doc.addPage();
-      page += 1;
-      drawHeader(page);
-      y = restTop;
-    }
+
 
     const it = seq.items[i];
     const x = margin + col * (cardW + gap);
@@ -546,15 +566,11 @@ export async function exportSequenceGridPdf(
 
   }
 
-  const pageCount = doc.getNumberOfPages();
-  for (let p = 1; p <= pageCount; p++) {
-    doc.setPage(p);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
-    doc.setTextColor(muted);
-    doc.text(INSTAGRAM, pageW / 2, pageH - 6, { align: "center" });
-    doc.text(`${p} / ${pageCount}`, pageW - margin, pageH - 6, { align: "right" });
-  }
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(muted);
+  doc.text(INSTAGRAM, pageW / 2, pageH - 6, { align: "center" });
+
 
   doc.save(`${seq.title.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-grid.pdf`);
 }
