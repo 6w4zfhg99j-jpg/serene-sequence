@@ -332,17 +332,25 @@ export async function exportSequenceGridPdf(seq: Sequence) {
   const labelH = 9;
   const cardH = imgH + labelH;
 
-  const headerH = 18;
+  const notesLines = seq.practice_notes
+    ? (doc.splitTextToSize(seq.practice_notes, pageW - margin * 2) as string[])
+    : [];
+  const headerH = 24 + notesLines.length * 4;
   const footerH = 10;
   const firstTop = margin + headerH;
   const restTop = margin + 6;
 
   function drawHeader(page: number) {
     if (page === 1) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(muted);
+      doc.text(BRAND.toUpperCase(), margin, margin);
+
       doc.setFont("times", "italic");
       doc.setFontSize(20);
       doc.setTextColor(ink);
-      doc.text(seq.title, margin, margin + 6);
+      doc.text(seq.title, margin, margin + 9);
 
       const totalDur = seq.items.reduce(
         (s, it) => s + (it.duration_seconds ?? it.pose.duration_seconds ?? 0),
@@ -359,9 +367,15 @@ export async function exportSequenceGridPdf(seq: Sequence) {
       ]
         .filter(Boolean)
         .join("   ·   ");
-      doc.text(meta, margin, margin + 11);
+      doc.text(meta, margin, margin + 14);
+      if (notesLines.length) {
+        doc.setFontSize(9);
+        doc.setTextColor(ink);
+        doc.text(notesLines, margin, margin + 19);
+      }
+      const rule = margin + 17 + notesLines.length * 4;
       doc.setDrawColor(220, 216, 208);
-      doc.line(margin, margin + 14, pageW - margin, margin + 14);
+      doc.line(margin, rule, pageW - margin, rule);
     } else {
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8);
