@@ -1,5 +1,5 @@
 import { jsPDF } from "jspdf";
-import { getSignedImageUrls, formatDuration, type Sequence } from "@/lib/yoga-api";
+import { getSignedImageUrls, type Sequence } from "@/lib/yoga-api";
 import { localBridge } from "@/lib/local-bridge";
 
 /** Paths that the browser/Electron renderer can load directly. */
@@ -194,9 +194,16 @@ function withRoundedClip(
   }
 }
 
+export async function exportSequencePdf(
+  seq: Sequence,
+  opts: { includeNotes?: boolean; format?: PdfFormat; columns?: PdfColumns } = {}
+) {
+  return exportSequenceGridPdf(seq, opts);
+}
+
 export async function exportSequenceGridPdf(
   seq: Sequence,
-  opts: { includeNotes?: boolean; format?: PdfFormat } = {}
+  opts: { includeNotes?: boolean; format?: PdfFormat; columns?: PdfColumns } = {}
 ) {
   const withNotes = opts.includeNotes !== false;
   const format = opts.format ?? "a4";
@@ -234,10 +241,16 @@ export async function exportSequenceGridPdf(
   // Grid metrics — screen format is a teaching board: comfortable cards
   // sized so ~4 rows fit on one landscape page.
   const hasNotes = withNotes && seq.items.some((it) => !!it.notes);
-  const cols = isScreen ? 10 : 5;
-  const gap = isScreen ? 3 : 4;
+  const allowed = COLUMN_OPTIONS[format];
+  const cols = allowed.includes(opts.columns as PdfColumns)
+    ? (opts.columns as PdfColumns)
+    : defaultColumns(format);
+  // Denser grids need tighter gaps and smaller type to stay balanced.
+  const dense = cols >= 10;
+  const gap = dense ? 3 : isScreen ? 4 : cols >= 7 ? 3.5 : 4;
   const cardW = (pageW - margin * 2 - gap * (cols - 1)) / cols;
-  const labelH = isScreen ? (hasNotes ? 10 : 7) : hasNotes ? 16 : 9;
+  const scale = Math.min(1.25, Math.max(0.9, cardW / (isScreen ? 26 : 36)));
+  const labelH = (isScreen ? (hasNotes ? 10 : 7) : hasNotes ? 16 : 9) * (dense ? 1 : scale);
 
   // Practice notes live in the upper-right corner, clear of the sequence grid.
   const notesW = (pageW - margin * 2) * 0.38;
@@ -291,16 +304,11 @@ export async function exportSequenceGridPdf(
     doc.setTextColor(ink);
     doc.text(seq.title, margin, margin + 10);
 
-    const totalDur = seq.items.reduce(
-      (s, it) => s + (it.duration_seconds ?? it.pose.duration_seconds ?? 0),
-      0
-    );
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8.5);
     doc.setTextColor(muted);
     const meta = [
       `${seq.items.length} poses`,
-      formatDuration(totalDur),
       seq.level.replace("-", " "),
       seq.tags.map((t) => `#${t.name}`).join("  "),
     ]
@@ -382,9 +390,9 @@ export async function exportSequenceGridPdf(
     doc.text(String(i + 1).padStart(2, "0"), x + 1.2, y + (isScreen ? 3.6 : 4.5));
 
     // Name
-    const nameLead = isScreen ? 2.7 : 3;
+    const nameLead = (isScreen ? 2.7 : 3) * scale;
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(isScreen ? 7 : 7.5);
+    doc.setFontSize((isScreen ? 7 : 7.5) * scale);
     doc.setTextColor(ink);
     const nameLines = doc
       .splitTextToSize(it.pose.name, cardW - 1)
@@ -393,28 +401,24 @@ export async function exportSequenceGridPdf(
       doc.text(ln, x + cardW / 2, y + imgH + 3 + li * nameLead, { align: "center" });
     });
 
-    // Duration / side
-    const dur = it.duration_seconds ?? it.pose.duration_seconds;
-    const bits: string[] = [];
-    if (dur) bits.push(formatDuration(dur));
-    if (it.side) bits.push(it.side);
+    // Side marker (no durations — sequences focus on order and cues)
     let ty = y + imgH + 3 + nameLines.length * nameLead;
-    if (bits.length) {
-      doc.setFontSize(isScreen ? 5.8 : 6.5);
+    if (it.side) {
+      doc.setFontSize((isScreen ? 5.8 : 6.5) * scale);
       doc.setTextColor(muted);
-      doc.text(bits.join(" · "), x + cardW / 2, ty, { align: "center" });
-      ty += isScreen ? 2.3 : 2.6;
+      doc.text(it.side, x + cardW / 2, ty, { align: "center" });
+      ty += (isScreen ? 2.3 : 2.6) * scale;
     }
 
     // Pose note — small, light grey, directly under the name
     if (withNotes && it.notes) {
-      doc.setFontSize(isScreen ? 5.2 : 5.8);
+      doc.setFontSize((isScreen ? 5.2 : 5.8) * scale);
       doc.setTextColor(150, 146, 138);
       const noteLines = doc
         .splitTextToSize(it.notes, cardW - 1)
         .slice(0, isScreen ? 2 : 3) as string[];
       noteLines.forEach((ln, li) => {
-        doc.text(ln, x + cardW / 2, ty + li * (isScreen ? 2.1 : 2.3), { align: "center" });
+        doc.text(ln, x + cardW / 2, ty + li * (isScreen ? 2.1 : 2.3) * scale, { align: "center" });
       });
     }
 
