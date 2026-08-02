@@ -570,15 +570,11 @@ export async function exportSequenceGridPdf(
 
   }
 
-  const pageCount = doc.getNumberOfPages();
-  for (let p = 1; p <= pageCount; p++) {
-    doc.setPage(p);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
-    doc.setTextColor(muted);
-    doc.text(INSTAGRAM, pageW / 2, pageH - 6, { align: "center" });
-    doc.text(`${p} / ${pageCount}`, pageW - margin, pageH - 6, { align: "right" });
-  }
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(muted);
+  doc.text(INSTAGRAM, pageW / 2, pageH - 6, { align: "center" });
+
 
   doc.save(`${seq.title.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-grid.pdf`);
 }
