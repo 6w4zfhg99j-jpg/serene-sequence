@@ -361,7 +361,7 @@ export async function exportSequenceGridPdf(
   const cols = isScreen ? 10 : 5;
   const gap = isScreen ? 3 : 4;
   const cardW = (pageW - margin * 2 - gap * (cols - 1)) / cols;
-  const labelH = isScreen ? (hasNotes ? 9 : 6) : hasNotes ? 16 : 9;
+  const labelH = isScreen ? (hasNotes ? 10 : 7) : hasNotes ? 16 : 9;
 
   // Practice notes live in the upper-right corner, clear of the sequence grid.
   const notesW = (pageW - margin * 2) * 0.38;
