@@ -171,14 +171,14 @@ export function BuilderLibrary({ poses, categories, subcategories = [], onAdd }:
                 </div>
               )}
               {!isCollapsed && (
-                <div className="mb-2 mt-1 grid grid-cols-2 gap-1.5 pl-2">
+                <div className="mb-2 mt-1 grid grid-cols-3 gap-1.5 pl-2 sm:grid-cols-4 lg:grid-cols-5">
                   {visiblePoses.map((p) => (
                     <button
                       key={id + "-" + p.id}
                       type="button"
                       onClick={() => handleAdd(p)}
                       className={
-                        "group flex items-center gap-2 overflow-hidden rounded-md border border-line bg-background p-1.5 text-left transition-all hover:border-ink-subtle hover:shadow-sm active:scale-[0.98] " +
+                        "group relative flex flex-col overflow-hidden rounded-md border border-line bg-background p-1 text-center transition-all hover:border-ink-subtle hover:shadow-sm active:scale-[0.98] " +
                         (pulsed === p.id ? "ring-2 ring-accent" : "")
                       }
                       title={t("common.clickToAdd")}
@@ -186,21 +186,14 @@ export function BuilderLibrary({ poses, categories, subcategories = [], onAdd }:
                       <PoseImage
                         path={p.image_url}
                         alt={p.name}
-                        className="size-10 shrink-0 rounded object-cover"
+                        className="aspect-square w-full rounded object-cover"
                       />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs font-medium leading-tight">
-                          {p.name}
-                        </p>
-                        {p.sanskrit_name && (
-                          <p className="truncate text-[10px] italic text-ink-subtle">
-                            {p.sanskrit_name}
-                          </p>
-                        )}
-                      </div>
+                      <p className="mt-1 line-clamp-2 px-0.5 text-[11px] font-medium leading-tight">
+                        {p.name}
+                      </p>
                       {p.is_favorite && (
                         <Heart
-                          className="size-3 shrink-0 fill-accent text-accent"
+                          className="absolute right-1 top-1 size-3 fill-accent text-accent drop-shadow"
                           strokeWidth={2}
                         />
                       )}
@@ -208,6 +201,7 @@ export function BuilderLibrary({ poses, categories, subcategories = [], onAdd }:
                   ))}
                 </div>
               )}
+
             </div>
           );
         })}
