@@ -150,12 +150,20 @@ export async function exportSequencePdf(
     ).map(async (u) => loaded.set(u, await loadImageAsDataUrl(u)))
   );
 
-  // Header
+  // Header — brand line, practice name, meta, practice notes
+  let hy = margin;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(muted);
+  doc.text(BRAND.toUpperCase(), margin, hy);
+
+  hy += 9;
   doc.setTextColor(ink);
   doc.setFont("times", "italic");
   doc.setFontSize(28);
-  doc.text(seq.title, margin, margin + 6);
+  doc.text(seq.title, margin, hy);
 
+  hy += 6;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
   doc.setTextColor(muted);
@@ -171,21 +179,34 @@ export async function exportSequencePdf(
   ]
     .filter(Boolean)
     .join("   ·   ");
-  doc.text(meta, margin, margin + 12);
+  doc.text(meta, margin, hy);
 
   if (seq.description) {
+    hy += 7;
     doc.setFontSize(10);
     doc.setTextColor(ink);
     const lines = doc.splitTextToSize(seq.description, pageW - margin * 2);
-    doc.text(lines, margin, margin + 20);
+    doc.text(lines, margin, hy);
+    hy += lines.length * 5;
   }
 
-  doc.setDrawColor(220, 216, 208);
-  doc.line(margin, margin + 26, pageW - margin, margin + 26);
+  if (seq.practice_notes) {
+    hy += 6;
+    doc.setFontSize(10);
+    doc.setTextColor(ink);
+    const noteLines = doc.splitTextToSize(seq.practice_notes, pageW - margin * 2);
+    doc.text(noteLines, margin, hy);
+    hy += noteLines.length * 5;
+  }
 
-  let y = margin + 34;
+  hy += 6;
+  doc.setDrawColor(220, 216, 208);
+  doc.line(margin, hy, pageW - margin, hy);
+
+  let y = hy + 8;
   const rowH = 38;
   const imgSize = 32;
+
 
   for (let i = 0; i < seq.items.length; i++) {
     const it = seq.items[i];
