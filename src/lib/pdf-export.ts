@@ -169,10 +169,16 @@ export async function exportSequencePdf(
 
   // Header — brand line, practice name, meta, practice notes
   let hy = margin;
+  doc.setFont("times", "italic");
+  doc.setFontSize(12);
+  doc.setTextColor(ink);
+  doc.text("VONA", margin, hy);
+  const vonaW = doc.getTextWidth("VONA");
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(8);
+  doc.setFontSize(9.5);
   doc.setTextColor(muted);
-  doc.text(BRAND.toUpperCase(), margin, hy);
+  doc.text("SEQUENCE DESIGNER", margin + vonaW + 2, hy);
+
 
   hy += 9;
   doc.setTextColor(ink);
