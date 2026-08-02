@@ -298,6 +298,7 @@ export type Database = {
           folder_id: string | null
           id: string
           level: string
+          practice_notes: string | null
           title: string
           updated_at: string
         }
@@ -307,6 +308,7 @@ export type Database = {
           folder_id?: string | null
           id?: string
           level?: string
+          practice_notes?: string | null
           title: string
           updated_at?: string
         }
@@ -316,6 +318,7 @@ export type Database = {
           folder_id?: string | null
           id?: string
           level?: string
+          practice_notes?: string | null
           title?: string
           updated_at?: string
         }
