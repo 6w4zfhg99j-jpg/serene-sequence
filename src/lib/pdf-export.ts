@@ -355,7 +355,7 @@ export async function exportSequenceGridPdf(
   const cardW = (pageW - margin * 2 - gap * (cols - 1)) / cols;
   const imgH = cardW;
   const hasNotes = withNotes && seq.items.some((it) => !!it.notes);
-  const labelH = hasNotes ? 16 : 9;
+  const labelH = isScreen ? (hasNotes ? 20 : 12) : hasNotes ? 16 : 9;
   const cardH = imgH + labelH;
 
   const notesLines = seq.practice_notes
