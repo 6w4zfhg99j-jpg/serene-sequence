@@ -345,7 +345,7 @@ function SequenceEditor() {
         </section>
 
         {/* Sequence */}
-        <section className="rounded-2xl border border-line bg-surface p-4">
+        <section className="flex max-h-[calc(100vh-9rem)] min-w-0 flex-col overflow-y-auto rounded-2xl border border-line bg-surface p-4 lg:sticky lg:top-4">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="font-serif text-xl">Current sequence</h2>
             <span className="text-xs text-ink-subtle">
