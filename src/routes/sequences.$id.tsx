@@ -320,9 +320,9 @@ function SequenceEditor() {
       </div>
 
       {/* Two-panel */}
-      <div className="grid gap-6 lg:grid-cols-[minmax(320px,420px)_1fr]">
+      <div className="grid items-start gap-6 lg:grid-cols-2">
         {/* Library */}
-        <section className="flex max-h-[calc(100vh-14rem)] flex-col rounded-2xl border border-line bg-surface p-4">
+        <section className="flex max-h-[calc(100vh-9rem)] min-w-0 flex-col overflow-hidden rounded-2xl border border-line bg-surface p-4 lg:sticky lg:top-4">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="font-serif text-xl">Pose library</h2>
             <span className="text-xs text-ink-subtle">{poses.length}</span>
@@ -345,7 +345,7 @@ function SequenceEditor() {
         </section>
 
         {/* Sequence */}
-        <section className="rounded-2xl border border-line bg-surface p-4">
+        <section className="flex max-h-[calc(100vh-9rem)] min-w-0 flex-col overflow-y-auto rounded-2xl border border-line bg-surface p-4 lg:sticky lg:top-4">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="font-serif text-xl">Current sequence</h2>
             <span className="text-xs text-ink-subtle">
