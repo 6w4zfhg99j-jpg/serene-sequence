@@ -8,17 +8,17 @@ import { useCategoryLabel } from "@/lib/i18n/categories";
 
 const LS_KEY = "builder.categoryCollapse.v1";
 const COLS_KEY = "builder.cardsPerRow.v1";
-const COL_OPTIONS = [4, 5, 6] as const;
+const COL_OPTIONS = [6, 10, 12] as const;
 const COL_CLASS: Record<number, string> = {
-  4: "grid-cols-4",
-  5: "grid-cols-5",
   6: "grid-cols-6",
+  10: "grid-cols-10",
+  12: "grid-cols-12",
 };
 
 function loadCols(): number {
-  if (typeof window === "undefined") return 5;
+  if (typeof window === "undefined") return 6;
   const v = Number(localStorage.getItem(COLS_KEY));
-  return COL_OPTIONS.includes(v as (typeof COL_OPTIONS)[number]) ? v : 5;
+  return COL_OPTIONS.includes(v as (typeof COL_OPTIONS)[number]) ? v : 6;
 }
 const OTHER = "__other__";
 
