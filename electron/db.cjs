@@ -145,8 +145,14 @@ function init(dbPath) {
   if (!seqCols.includes("practice_notes")) {
     db.exec("ALTER TABLE sequences ADD COLUMN practice_notes TEXT");
   }
+  // Trash: deleted sequences are kept for 7 days before being purged.
+  if (!seqCols.includes("deleted_at")) {
+    db.exec("ALTER TABLE sequences ADD COLUMN deleted_at TEXT");
+  }
   db.exec("CREATE INDEX IF NOT EXISTS idx_sequences_folder ON sequences(folder_id)");
   db.exec("CREATE INDEX IF NOT EXISTS idx_folders_parent ON folders(parent_id)");
+  purgeExpiredTrash();
+
 
   db.exec("CREATE TABLE IF NOT EXISTS app_meta (key TEXT PRIMARY KEY, value TEXT)");
   const metaGet = db.prepare("SELECT value FROM app_meta WHERE key = ?");
