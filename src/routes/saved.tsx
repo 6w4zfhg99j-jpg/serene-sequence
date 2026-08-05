@@ -1,7 +1,15 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Calendar, Copy, FolderInput, GripVertical, Plus, Trash2 } from "lucide-react";
+import {
+  Calendar,
+  Copy,
+  FolderInput,
+  GripVertical,
+  Plus,
+  RotateCcw,
+  Trash2,
+} from "lucide-react";
 import { format } from "date-fns";
 
 import {
@@ -12,9 +20,14 @@ import {
   duplicateSequence,
   fetchFolders,
   fetchSequences,
+  fetchTrashedSequences,
   formatDuration,
+  emptyTrash,
   moveSequenceToFolder,
+  purgeSequence,
   renameFolder,
+  restoreSequence,
+  trashDaysLeft,
   type Folder,
 } from "@/lib/yoga-api";
 import { Button } from "@/components/ui/button";
@@ -87,9 +100,16 @@ function Home() {
   const [newFolderId, setNewFolderId] = useState<string | null>(null);
   const [showNew, setShowNew] = useState(false);
   const [selection, setSelection] = useState<FolderSelection>({ kind: "all" });
+  const [showTrash, setShowTrash] = useState(false);
+
+  const { data: trashed = [] } = useQuery({
+    queryKey: ["sequences", "trash"],
+    queryFn: fetchTrashedSequences,
+  });
 
   const refreshAll = () => {
     qc.invalidateQueries({ queryKey: ["sequences"] });
+    qc.invalidateQueries({ queryKey: ["sequences", "trash"] });
     qc.invalidateQueries({ queryKey: ["folders"] });
   };
 
@@ -112,6 +132,18 @@ function Home() {
   });
   const del = useMutation({
     mutationFn: (id: string) => deleteSequence(id),
+    onSuccess: refreshAll,
+  });
+  const restore = useMutation({
+    mutationFn: (id: string) => restoreSequence(id),
+    onSuccess: refreshAll,
+  });
+  const purge = useMutation({
+    mutationFn: (id: string) => purgeSequence(id),
+    onSuccess: refreshAll,
+  });
+  const clearTrash = useMutation({
+    mutationFn: () => emptyTrash(),
     onSuccess: refreshAll,
   });
   const move = useMutation({
