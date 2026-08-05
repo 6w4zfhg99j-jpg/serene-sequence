@@ -302,7 +302,8 @@ export async function exportSequenceGridPdf(
   const labelTop = 3;
   const labelBottom = 1.5 * scale;
 
-  measure.setFont("helvetica", "normal");
+  measure.setFont(SANS, "normal");
+
   const cardText = seq.items.map((it) => {
     measure.setFontSize(nameSize);
     const nameLines = (
