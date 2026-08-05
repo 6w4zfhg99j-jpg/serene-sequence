@@ -562,12 +562,16 @@ function TagQuickAdd({ onCreate }: { onCreate: (raw: string) => void }) {
 function SequenceRow({
   item,
   index,
+  highlight,
+  rowRef,
   onRemove,
   onDuplicate,
   onPatch,
 }: {
   item: SequencePoseItem;
   index: number;
+  highlight: boolean;
+  rowRef: (el: HTMLElement | null) => void;
   onRemove: () => void;
   onDuplicate: () => void;
   onPatch: (p: Parameters<typeof updateSequenceItem>[1]) => void;
@@ -587,9 +591,17 @@ function SequenceRow({
 
   return (
     <li
-      ref={setNodeRef}
+      ref={(node) => {
+        setNodeRef(node);
+        rowRef(node);
+      }}
       style={style}
-      className="group rounded-lg border border-line bg-background"
+      className={
+        "group rounded-lg border bg-background transition-colors " +
+        (highlight
+          ? "border-accent bg-accent/10 animate-pulse"
+          : "border-line")
+      }
     >
       <div className="flex items-start gap-3 p-2.5">
         <button
