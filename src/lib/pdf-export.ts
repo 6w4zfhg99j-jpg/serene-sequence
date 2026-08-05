@@ -1,5 +1,26 @@
 import { jsPDF } from "jspdf";
 import { getSignedImageUrls, type Sequence } from "@/lib/yoga-api";
+import {
+  VONA_SANS_TTF_BASE64,
+  VONA_SERIF_ITALIC_TTF_BASE64,
+} from "@/lib/pdf-fonts";
+
+/** Font names used everywhere in the export (Unicode: Latin + Cyrillic). */
+const SANS = "VonaSans";
+const SERIF = "VonaSerif";
+
+/**
+ * Registers the embedded Unicode fonts on a jsPDF instance. jsPDF's built-in
+ * Helvetica/Times are WinAnsi-only, so Ukrainian/Russian titles came out as
+ * garbage; these subsets cover Latin, Cyrillic and Greek.
+ */
+function registerFonts(doc: jsPDF) {
+  doc.addFileToVFS("VonaSans.ttf", VONA_SANS_TTF_BASE64);
+  doc.addFont("VonaSans.ttf", SANS, "normal");
+  doc.addFileToVFS("VonaSerifItalic.ttf", VONA_SERIF_ITALIC_TTF_BASE64);
+  doc.addFont("VonaSerifItalic.ttf", SERIF, "italic");
+}
+
 import { localBridge } from "@/lib/local-bridge";
 
 /** Paths that the browser/Electron renderer can load directly. */
@@ -221,6 +242,8 @@ export async function exportSequenceGridPdf(
     orientation: geom.orientation,
     format: geom.spec,
   });
+  registerFonts(measure);
+
   const pageW = geom.w;
   const baseH = geom.h;
 
@@ -279,7 +302,8 @@ export async function exportSequenceGridPdf(
   const labelTop = 3;
   const labelBottom = 1.5 * scale;
 
-  measure.setFont("helvetica", "normal");
+  measure.setFont(SANS, "normal");
+
   const cardText = seq.items.map((it) => {
     measure.setFontSize(nameSize);
     const nameLines = (
@@ -307,15 +331,33 @@ export async function exportSequenceGridPdf(
 
   // Practice notes live in the upper-right corner, clear of the sequence grid.
   const notesW = (pageW - margin * 2) * 0.38;
-  measure.setFont("helvetica", "normal");
+  measure.setFont(SANS, "normal");
   measure.setFontSize(8.5);
   const notesLines = seq.practice_notes
     ? (measure.splitTextToSize(seq.practice_notes, notesW) as string[])
     : [];
-  const notesBlockH = notesLines.length ? 4 + notesLines.length * 4 : 0;
-  const headerH = Math.max(isScreen ? 19 : 24, notesBlockH + (isScreen ? 6 : 8));
+  const notesBlockH = notesLines.length ? 4.5 + notesLines.length * 4 : 0;
+
+  // Header geometry is measured, never guessed: the title wraps inside the
+  // space left by the notes column, and the grid always starts below whichever
+  // side of the header is taller.
+  const titleTop = 10;
+  const titleLead = 8;
+  const titleW = (pageW - margin * 2) * (notesLines.length ? 0.58 : 1);
+  measure.setFont(SERIF, "italic");
+  measure.setFontSize(20);
+  const titleLines = (
+    measure.splitTextToSize(seq.title, titleW) as string[]
+  ).slice(0, 3);
+  measure.setFont(SANS, "normal");
+  measure.setFontSize(8.5);
+  const metaTop = titleTop + (titleLines.length - 1) * titleLead + 5;
+  const leftBlockH = metaTop;
+  const headerH =
+    Math.max(leftBlockH, notesBlockH) + (isScreen ? 7 : 9);
   const footerH = isScreen ? 8 : 10;
   const firstTop = margin + headerH;
+
 
   let imgH = cardW;
   if (isScreen) {
@@ -345,28 +387,27 @@ export async function exportSequenceGridPdf(
     format: [pageW, pageH],
     compress: true,
   });
-
-
-
-
+  registerFonts(doc);
 
   function drawHeader() {
-    doc.setFont("times", "italic");
+    doc.setFont(SERIF, "italic");
     doc.setFontSize(12);
     doc.setTextColor(ink);
     doc.text("VONA", margin, margin);
     const vonaW = doc.getTextWidth("VONA");
-    doc.setFont("helvetica", "normal");
+    doc.setFont(SANS, "normal");
     doc.setFontSize(9.5);
     doc.setTextColor(muted);
     doc.text("SEQUENCE DESIGNER", margin + vonaW + 2, margin);
 
-    doc.setFont("times", "italic");
+    doc.setFont(SERIF, "italic");
     doc.setFontSize(20);
     doc.setTextColor(ink);
-    doc.text(seq.title, margin, margin + 10);
+    titleLines.forEach((ln, li) => {
+      doc.text(ln, margin, margin + titleTop + li * titleLead);
+    });
 
-    doc.setFont("helvetica", "normal");
+    doc.setFont(SANS, "normal");
     doc.setFontSize(8.5);
     doc.setTextColor(muted);
     const meta = [
@@ -376,11 +417,11 @@ export async function exportSequenceGridPdf(
     ]
       .filter(Boolean)
       .join("   ·   ");
-    doc.text(meta, margin, margin + 15);
+    doc.text(meta, margin, margin + metaTop, { maxWidth: titleW });
 
     if (notesLines.length) {
       const nx = pageW - margin;
-      doc.setFont("helvetica", "normal");
+      doc.setFont(SANS, "normal");
       doc.setFontSize(7);
       doc.setTextColor(muted);
       doc.text("PRACTICE NOTES", nx, margin, { align: "right" });
@@ -395,6 +436,7 @@ export async function exportSequenceGridPdf(
     doc.setDrawColor(220, 216, 208);
     doc.line(margin, rule, pageW - margin, rule);
   }
+
 
 
   drawHeader();
@@ -447,13 +489,13 @@ export async function exportSequenceGridPdf(
     }
 
     // Index badge
-    doc.setFont("times", "italic");
+    doc.setFont(SERIF, "italic");
     doc.setFontSize(isScreen ? 6.5 : 8);
     doc.setTextColor(muted);
     doc.text(String(i + 1).padStart(2, "0"), x + 1.2, y + (isScreen ? 3.6 : 4.5));
 
     // Name — wraps onto up to three lines, space is reserved by the row height
-    doc.setFont("helvetica", "normal");
+    doc.setFont(SANS, "normal");
     doc.setFontSize(nameSize);
     doc.setTextColor(ink);
     text.nameLines.forEach((ln, li) => {
@@ -489,11 +531,19 @@ export async function exportSequenceGridPdf(
   }
 
 
-  doc.setFont("helvetica", "normal");
+  doc.setFont(SANS, "normal");
   doc.setFontSize(8);
   doc.setTextColor(muted);
   doc.text(INSTAGRAM, pageW / 2, pageH - 6, { align: "center" });
 
 
-  doc.save(`${seq.title.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-grid.pdf`);
+  // Keep non-Latin titles in the filename instead of collapsing them to "-".
+  const slug =
+    seq.title
+      .trim()
+      .replace(/[^\p{L}\p{N}]+/gu, "-")
+      .replace(/^-+|-+$/g, "")
+      .toLowerCase() || "sequence";
+  doc.save(`${slug}-grid.pdf`);
+
 }
