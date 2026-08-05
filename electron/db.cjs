@@ -739,9 +739,26 @@ function setSequenceTags(sequenceId, tagIds) {
   for (const tid of tagIds) ins.run(sequenceId, tid);
 }
 
+/** Soft delete — the sequence moves to the Trash for 7 days. */
 function deleteSequence(id) {
+  db.prepare("UPDATE sequences SET deleted_at = ? WHERE id = ?").run(now(), id);
+}
+
+/** Bring a sequence back out of the Trash. */
+function restoreSequence(id) {
+  db.prepare("UPDATE sequences SET deleted_at = NULL WHERE id = ?").run(id);
+}
+
+/** Remove a sequence for good. */
+function purgeSequence(id) {
   db.prepare("DELETE FROM sequences WHERE id = ?").run(id);
 }
+
+/** Empty the Trash. */
+function emptyTrash() {
+  db.prepare("DELETE FROM sequences WHERE deleted_at IS NOT NULL").run();
+}
+
 
 function duplicateSequence(id) {
   const src = getSequence(id);
