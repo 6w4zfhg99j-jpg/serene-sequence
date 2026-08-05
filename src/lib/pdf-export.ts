@@ -266,7 +266,44 @@ export async function exportSequenceGridPdf(
     maxScale,
     Math.max(0.9, cardW / (isScreen ? 26 : 36))
   );
-  const labelH = (isScreen ? (hasNotes ? 10 : 7) : hasNotes ? 16 : 9) * (dense ? 1 : scale);
+  // Text metrics — every card reserves the exact space its wrapped title,
+  // side marker and note need, so nothing can overlap the row above.
+  const nameSize = (isScreen ? 7 : 7.5) * scale;
+  const nameLead = (isScreen ? 2.7 : 3) * scale;
+  const sideSize = (isScreen ? 5.8 : 6.5) * scale;
+  const sideLead = (isScreen ? 2.3 : 2.6) * scale;
+  const noteSize = (isScreen ? 5.2 : 5.8) * scale;
+  const noteLead = (isScreen ? 2.1 : 2.3) * scale;
+  const maxNameLines = 3;
+  const maxNoteLines = isScreen ? 2 : 3;
+  const labelTop = 3;
+  const labelBottom = 1.5 * scale;
+
+  measure.setFont("helvetica", "normal");
+  const cardText = seq.items.map((it) => {
+    measure.setFontSize(nameSize);
+    const nameLines = (
+      measure.splitTextToSize(it.pose.name, cardW - 1) as string[]
+    ).slice(0, maxNameLines);
+    measure.setFontSize(noteSize);
+    const noteLines =
+      withNotes && it.notes
+        ? (measure.splitTextToSize(it.notes, cardW - 1) as string[]).slice(
+            0,
+            maxNoteLines
+          )
+        : [];
+    const height =
+      labelTop +
+      nameLines.length * nameLead +
+      (it.side ? sideLead : 0) +
+      noteLines.length * noteLead +
+      labelBottom;
+    return { nameLines, noteLines, height };
+  });
+  const maxLabelH = cardText.length
+    ? Math.max(...cardText.map((c) => c.height))
+    : (hasNotes ? 10 : 7) * scale;
 
   // Practice notes live in the upper-right corner, clear of the sequence grid.
   const notesW = (pageW - margin * 2) * 0.38;
@@ -283,16 +320,24 @@ export async function exportSequenceGridPdf(
   let imgH = cardW;
   if (isScreen) {
     const avail = baseH - firstTop - margin - footerH;
-    imgH = Math.max(12, (avail - gap * (screenRows - 1)) / screenRows - labelH);
+    imgH = Math.max(12, (avail - gap * (screenRows - 1)) / screenRows - maxLabelH);
   }
-  const cardH = imgH + labelH;
+
+  // Each row grows to fit its tallest label block; spacing stays uniform.
+  const rows = Math.max(1, Math.ceil(seq.items.length / cols));
+  const rowLabelH: number[] = [];
+  for (let r = 0; r < rows; r++) {
+    const slice = cardText.slice(r * cols, r * cols + cols);
+    rowLabelH.push(
+      slice.length ? Math.max(...slice.map((c) => c.height)) : maxLabelH
+    );
+  }
+  const gridH =
+    rowLabelH.reduce((sum, h) => sum + imgH + h + gap, 0) - gap;
 
   // One continuous page: extend the document height to fit every row.
-  const rows = Math.max(1, Math.ceil(seq.items.length / cols));
-  const pageH = Math.max(
-    baseH,
-    firstTop + rows * (cardH + gap) - gap + footerH + margin
-  );
+  const pageH = Math.max(baseH, firstTop + gridH + footerH + margin);
+
 
   const doc = new jsPDF({
     unit: "mm",
