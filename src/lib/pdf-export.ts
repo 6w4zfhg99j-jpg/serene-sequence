@@ -242,6 +242,8 @@ export async function exportSequenceGridPdf(
     orientation: geom.orientation,
     format: geom.spec,
   });
+  registerFonts(measure);
+
   const pageW = geom.w;
   const baseH = geom.h;
 
