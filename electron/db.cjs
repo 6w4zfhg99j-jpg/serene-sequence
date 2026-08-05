@@ -615,24 +615,45 @@ function listSequences() {
        FROM sequence_poses sp JOIN poses p ON p.id = sp.pose_id`,
     )
     .all();
-  return seqs.map((s) => {
-    const its = items.filter((i) => i.sequence_id === s.id);
-    return {
-      id: s.id,
-      title: s.title,
-      description: s.description,
-      level: s.level,
-      created_at: s.created_at,
-      updated_at: s.updated_at,
-      folder_id: s.folder_id ?? null,
-      pose_count: its.length,
-      total_duration_seconds: its.reduce(
-        (acc, i) => acc + (i.override ?? i.pose_dur ?? 0),
-        0,
-      ),
-      tags: seqTags(s.id),
-    };
-  });
+  return seqs.map((s) => mapSequenceRow(s, items));
+}
+
+function mapSequenceRow(s, items) {
+  const its = items.filter((i) => i.sequence_id === s.id);
+  return {
+    id: s.id,
+    title: s.title,
+    description: s.description,
+    level: s.level,
+    created_at: s.created_at,
+    updated_at: s.updated_at,
+    deleted_at: s.deleted_at ?? null,
+    folder_id: s.folder_id ?? null,
+    pose_count: its.length,
+    total_duration_seconds: its.reduce(
+      (acc, i) => acc + (i.override ?? i.pose_dur ?? 0),
+      0,
+    ),
+    tags: seqTags(s.id),
+  };
+}
+
+/** Sequences sitting in the Trash, newest deletion first. */
+function listTrashedSequences() {
+  purgeExpiredTrash();
+  const seqs = db
+    .prepare(
+      "SELECT * FROM sequences WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC",
+    )
+    .all();
+  const items = db
+    .prepare(
+      `SELECT sp.sequence_id, sp.duration_seconds AS override, p.duration_seconds AS pose_dur
+       FROM sequence_poses sp JOIN poses p ON p.id = sp.pose_id`,
+    )
+    .all();
+  return seqs.map((s) => mapSequenceRow(s, items));
+
 }
 
 function getSequence(id) {
