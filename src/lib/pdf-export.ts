@@ -387,28 +387,27 @@ export async function exportSequenceGridPdf(
     format: [pageW, pageH],
     compress: true,
   });
-
-
-
-
+  registerFonts(doc);
 
   function drawHeader() {
-    doc.setFont("times", "italic");
+    doc.setFont(SERIF, "italic");
     doc.setFontSize(12);
     doc.setTextColor(ink);
     doc.text("VONA", margin, margin);
     const vonaW = doc.getTextWidth("VONA");
-    doc.setFont("helvetica", "normal");
+    doc.setFont(SANS, "normal");
     doc.setFontSize(9.5);
     doc.setTextColor(muted);
     doc.text("SEQUENCE DESIGNER", margin + vonaW + 2, margin);
 
-    doc.setFont("times", "italic");
+    doc.setFont(SERIF, "italic");
     doc.setFontSize(20);
     doc.setTextColor(ink);
-    doc.text(seq.title, margin, margin + 10);
+    titleLines.forEach((ln, li) => {
+      doc.text(ln, margin, margin + titleTop + li * titleLead);
+    });
 
-    doc.setFont("helvetica", "normal");
+    doc.setFont(SANS, "normal");
     doc.setFontSize(8.5);
     doc.setTextColor(muted);
     const meta = [
@@ -418,11 +417,11 @@ export async function exportSequenceGridPdf(
     ]
       .filter(Boolean)
       .join("   ·   ");
-    doc.text(meta, margin, margin + 15);
+    doc.text(meta, margin, margin + metaTop, { maxWidth: titleW });
 
     if (notesLines.length) {
       const nx = pageW - margin;
-      doc.setFont("helvetica", "normal");
+      doc.setFont(SANS, "normal");
       doc.setFontSize(7);
       doc.setTextColor(muted);
       doc.text("PRACTICE NOTES", nx, margin, { align: "right" });
@@ -437,6 +436,7 @@ export async function exportSequenceGridPdf(
     doc.setDrawColor(220, 216, 208);
     doc.line(margin, rule, pageW - margin, rule);
   }
+
 
 
   drawHeader();
