@@ -72,7 +72,15 @@ async function toDataUrl(url: string): Promise<string> {
   return blobToDataUrl(await res.blob());
 }
 
-/** Loads and decodes an image so jsPDF receives valid, correctly typed data. */
+/** Longest edge (px) kept for embedded photos — plenty for print/retina cards. */
+const MAX_IMAGE_EDGE = 720;
+/** JPEG quality: ~30% smaller files with no visible loss at card size. */
+const JPEG_QUALITY = 0.7;
+
+/**
+ * Loads, downscales and re-encodes an image so jsPDF embeds a compact JPEG
+ * instead of the original full-resolution bitmap.
+ */
 async function loadImageAsDataUrl(url: string): Promise<LoadedImage | null> {
   if (imageCache.has(url)) return imageCache.get(url) ?? null;
   let result: LoadedImage | null = null;
@@ -82,30 +90,28 @@ async function loadImageAsDataUrl(url: string): Promise<LoadedImage | null> {
     if (!img.naturalWidth || !img.naturalHeight) {
       throw new Error(`image has zero dimensions: ${url}`);
     }
-    const isPng = dataUrl.startsWith("data:image/png");
-    const isJpeg = /^data:image\/jpe?g/.test(dataUrl);
-    if (isPng || isJpeg) {
-      result = {
-        dataUrl,
-        format: isPng ? "PNG" : "JPEG",
-        w: img.naturalWidth,
-        h: img.naturalHeight,
-      };
-    } else {
-      // webp/gif/etc — re-encode to PNG, which jsPDF can embed.
-      const canvas = document.createElement("canvas");
-      canvas.width = img.naturalWidth;
-      canvas.height = img.naturalHeight;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) throw new Error("2d canvas context unavailable");
-      ctx.drawImage(img, 0, 0);
-      result = {
-        dataUrl: canvas.toDataURL("image/png"),
-        format: "PNG",
-        w: img.naturalWidth,
-        h: img.naturalHeight,
-      };
-    }
+    const ratio = Math.min(
+      1,
+      MAX_IMAGE_EDGE / Math.max(img.naturalWidth, img.naturalHeight),
+    );
+    const w = Math.max(1, Math.round(img.naturalWidth * ratio));
+    const h = Math.max(1, Math.round(img.naturalHeight * ratio));
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("2d canvas context unavailable");
+    // Flatten onto the card background so transparency does not turn black.
+    ctx.fillStyle = "#faf9f6";
+    ctx.fillRect(0, 0, w, h);
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(img, 0, 0, w, h);
+    result = {
+      dataUrl: canvas.toDataURL("image/jpeg", JPEG_QUALITY),
+      format: "JPEG",
+      w,
+      h,
+    };
   } catch (err) {
     console.error("[pdf] could not load image", url, err);
     result = null;
@@ -113,6 +119,7 @@ async function loadImageAsDataUrl(url: string): Promise<LoadedImage | null> {
   imageCache.set(url, result);
   return result;
 }
+
 
 
 export type PdfFormat = "a4" | "screen";
