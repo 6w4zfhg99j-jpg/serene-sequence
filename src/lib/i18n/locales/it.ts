@@ -20,6 +20,8 @@ export const it: Dict = {
   "common.favorite": "Preferito",
   "common.favoritesOnly": "Solo preferiti",
   "common.all": "Tutte",
+  "common.expandAll": "Espandi tutte",
+  "common.collapseAll": "Comprimi tutte",
   "common.other": "Altro",
   "common.drag": "Trascina",
   "common.pose": "posizione",

@@ -24,6 +24,8 @@ export const en = {
   "common.favorite": "Favorite",
   "common.favoritesOnly": "Favorites only",
   "common.all": "All",
+  "common.expandAll": "Expand all",
+  "common.collapseAll": "Collapse all",
   "common.other": "Other",
   "common.drag": "Drag",
   "common.pose": "pose",
