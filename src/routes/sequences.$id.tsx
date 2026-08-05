@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
@@ -166,6 +166,34 @@ function SequenceEditor() {
   const [pdfColumns, setPdfColumns] = useState<PdfColumns>(defaultColumns("a4"));
   const [exporting, setExporting] = useState(false);
 
+  // Auto-scroll + highlight the most recently added asana
+  const itemRefs = useRef<Map<string, HTMLElement>>(new Map());
+  const prevIds = useRef<Set<string> | null>(null);
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!seq) return;
+    const curIds = new Set(seq.items.map((i) => i.id));
+    if (prevIds.current === null) {
+      prevIds.current = curIds;
+      return;
+    }
+    const added = seq.items.filter((i) => !prevIds.current!.has(i.id));
+    prevIds.current = curIds;
+    if (added.length > 0) {
+      const target = added[added.length - 1];
+      // wait a tick for the new row to be mounted
+      requestAnimationFrame(() => {
+        const el = itemRefs.current.get(target.id);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "end" });
+        }
+      });
+      setHighlightId(target.id);
+      const timer = setTimeout(() => setHighlightId(null), 1600);
+      return () => clearTimeout(timer);
+    }
+  }, [seq]);
 
   if (isLoading || !seq) {
     return (
@@ -375,6 +403,11 @@ function SequenceEditor() {
                       key={it.id}
                       item={it}
                       index={idx}
+                      highlight={highlightId === it.id}
+                      rowRef={(el) => {
+                        if (el) itemRefs.current.set(it.id, el);
+                        else itemRefs.current.delete(it.id);
+                      }}
                       onRemove={() => removeItem.mutate(it.id)}
                       onDuplicate={() => dupItem.mutate(it)}
                       onPatch={(p) => patchItem.mutate({ id: it.id, patch: p })}
@@ -529,12 +562,16 @@ function TagQuickAdd({ onCreate }: { onCreate: (raw: string) => void }) {
 function SequenceRow({
   item,
   index,
+  highlight,
+  rowRef,
   onRemove,
   onDuplicate,
   onPatch,
 }: {
   item: SequencePoseItem;
   index: number;
+  highlight: boolean;
+  rowRef: (el: HTMLElement | null) => void;
   onRemove: () => void;
   onDuplicate: () => void;
   onPatch: (p: Parameters<typeof updateSequenceItem>[1]) => void;
@@ -554,9 +591,17 @@ function SequenceRow({
 
   return (
     <li
-      ref={setNodeRef}
+      ref={(node) => {
+        setNodeRef(node);
+        rowRef(node);
+      }}
       style={style}
-      className="group rounded-lg border border-line bg-background"
+      className={
+        "group rounded-lg border bg-background transition-colors " +
+        (highlight
+          ? "border-accent bg-accent/10 animate-pulse"
+          : "border-line")
+      }
     >
       <div className="flex items-start gap-3 p-2.5">
         <button
