@@ -90,6 +90,16 @@ export function BuilderLibrary({ poses, categories, subcategories = [], onAdd }:
     setCollapsed((c) => ({ ...c, [id]: !c[id] }));
   }
 
+  function expandAll() {
+    setCollapsed({});
+  }
+
+  function collapseAll() {
+    const all: Record<string, boolean> = {};
+    for (const g of grouped) all[g.cat?.id ?? OTHER] = true;
+    setCollapsed(all);
+  }
+
   function handleAdd(p: Pose) {
     onAdd(p);
     setPulsed(p.id);
@@ -97,7 +107,7 @@ export function BuilderLibrary({ poses, categories, subcategories = [], onAdd }:
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex min-h-0 flex-1 flex-col">
       <div className="mb-3 flex items-center gap-2">
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-ink-subtle" />
@@ -141,7 +151,24 @@ export function BuilderLibrary({ poses, categories, subcategories = [], onAdd }:
         </div>
       </div>
 
-      <div className="-mr-1 flex-1 overflow-y-auto pr-1">
+      <div className="mb-2 flex items-center gap-1">
+        <button
+          type="button"
+          onClick={expandAll}
+          className="rounded-md border border-line px-2 py-0.5 text-[11px] text-ink-muted transition-colors hover:border-ink-muted hover:text-ink"
+        >
+          {t("common.expandAll")}
+        </button>
+        <button
+          type="button"
+          onClick={collapseAll}
+          className="rounded-md border border-line px-2 py-0.5 text-[11px] text-ink-muted transition-colors hover:border-ink-muted hover:text-ink"
+        >
+          {t("common.collapseAll")}
+        </button>
+      </div>
+
+      <div className="-mr-1 min-h-0 flex-1 overflow-y-auto overscroll-contain pb-8 pr-1">
         {grouped.length === 0 && (
           <p className="p-4 text-center text-xs text-ink-subtle">{t("library.noMatchTitle")}</p>
         )}
