@@ -343,7 +343,9 @@ export async function exportSequenceGridPdf(
     unit: "mm",
     orientation: pageH >= pageW ? "portrait" : "landscape",
     format: [pageW, pageH],
+    compress: true,
   });
+
 
 
 
