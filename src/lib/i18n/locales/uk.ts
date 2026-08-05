@@ -20,6 +20,8 @@ export const uk: Dict = {
   "common.favorite": "В обране",
   "common.favoritesOnly": "Лише обране",
   "common.all": "Усі",
+  "common.expandAll": "Розгорнути всі",
+  "common.collapseAll": "Згорнути всі",
   "common.other": "Інше",
   "common.drag": "Перетягнути",
   "common.pose": "асана",
