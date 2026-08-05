@@ -166,6 +166,34 @@ function SequenceEditor() {
   const [pdfColumns, setPdfColumns] = useState<PdfColumns>(defaultColumns("a4"));
   const [exporting, setExporting] = useState(false);
 
+  // Auto-scroll + highlight the most recently added asana
+  const itemRefs = useRef<Map<string, HTMLElement>>(new Map());
+  const prevIds = useRef<Set<string> | null>(null);
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!seq) return;
+    const curIds = new Set(seq.items.map((i) => i.id));
+    if (prevIds.current === null) {
+      prevIds.current = curIds;
+      return;
+    }
+    const added = seq.items.filter((i) => !prevIds.current!.has(i.id));
+    prevIds.current = curIds;
+    if (added.length > 0) {
+      const target = added[added.length - 1];
+      // wait a tick for the new row to be mounted
+      requestAnimationFrame(() => {
+        const el = itemRefs.current.get(target.id);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "end" });
+        }
+      });
+      setHighlightId(target.id);
+      const timer = setTimeout(() => setHighlightId(null), 1600);
+      return () => clearTimeout(timer);
+    }
+  }, [seq]);
 
   if (isLoading || !seq) {
     return (
