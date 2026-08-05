@@ -331,15 +331,33 @@ export async function exportSequenceGridPdf(
 
   // Practice notes live in the upper-right corner, clear of the sequence grid.
   const notesW = (pageW - margin * 2) * 0.38;
-  measure.setFont("helvetica", "normal");
+  measure.setFont(SANS, "normal");
   measure.setFontSize(8.5);
   const notesLines = seq.practice_notes
     ? (measure.splitTextToSize(seq.practice_notes, notesW) as string[])
     : [];
-  const notesBlockH = notesLines.length ? 4 + notesLines.length * 4 : 0;
-  const headerH = Math.max(isScreen ? 19 : 24, notesBlockH + (isScreen ? 6 : 8));
+  const notesBlockH = notesLines.length ? 4.5 + notesLines.length * 4 : 0;
+
+  // Header geometry is measured, never guessed: the title wraps inside the
+  // space left by the notes column, and the grid always starts below whichever
+  // side of the header is taller.
+  const titleTop = 10;
+  const titleLead = 8;
+  const titleW = (pageW - margin * 2) * (notesLines.length ? 0.58 : 1);
+  measure.setFont(SERIF, "italic");
+  measure.setFontSize(20);
+  const titleLines = (
+    measure.splitTextToSize(seq.title, titleW) as string[]
+  ).slice(0, 3);
+  measure.setFont(SANS, "normal");
+  measure.setFontSize(8.5);
+  const metaTop = titleTop + (titleLines.length - 1) * titleLead + 5;
+  const leftBlockH = metaTop;
+  const headerH =
+    Math.max(leftBlockH, notesBlockH) + (isScreen ? 7 : 9);
   const footerH = isScreen ? 8 : 10;
   const firstTop = margin + headerH;
+
 
   let imgH = cardW;
   if (isScreen) {
