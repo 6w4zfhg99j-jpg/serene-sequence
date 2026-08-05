@@ -489,13 +489,13 @@ export async function exportSequenceGridPdf(
     }
 
     // Index badge
-    doc.setFont("times", "italic");
+    doc.setFont(SERIF, "italic");
     doc.setFontSize(isScreen ? 6.5 : 8);
     doc.setTextColor(muted);
     doc.text(String(i + 1).padStart(2, "0"), x + 1.2, y + (isScreen ? 3.6 : 4.5));
 
     // Name — wraps onto up to three lines, space is reserved by the row height
-    doc.setFont("helvetica", "normal");
+    doc.setFont(SANS, "normal");
     doc.setFontSize(nameSize);
     doc.setTextColor(ink);
     text.nameLines.forEach((ln, li) => {
@@ -531,7 +531,7 @@ export async function exportSequenceGridPdf(
   }
 
 
-  doc.setFont("helvetica", "normal");
+  doc.setFont(SANS, "normal");
   doc.setFontSize(8);
   doc.setTextColor(muted);
   doc.text(INSTAGRAM, pageW / 2, pageH - 6, { align: "center" });
