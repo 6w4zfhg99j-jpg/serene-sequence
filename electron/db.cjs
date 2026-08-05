@@ -590,8 +590,25 @@ function seqTags(sequenceId) {
     .all(sequenceId);
 }
 
+/** Days a deleted sequence stays recoverable in the Trash. */
+const TRASH_DAYS = 7;
+
+/** Permanently removes sequences deleted more than TRASH_DAYS ago. */
+function purgeExpiredTrash() {
+  const cutoff = new Date(Date.now() - TRASH_DAYS * 86400000).toISOString();
+  db.prepare(
+    "DELETE FROM sequences WHERE deleted_at IS NOT NULL AND deleted_at < ?",
+  ).run(cutoff);
+}
+
 function listSequences() {
-  const seqs = db.prepare("SELECT * FROM sequences ORDER BY updated_at DESC").all();
+  purgeExpiredTrash();
+  const seqs = db
+    .prepare(
+      "SELECT * FROM sequences WHERE deleted_at IS NULL ORDER BY updated_at DESC",
+    )
+    .all();
+
   const items = db
     .prepare(
       `SELECT sp.sequence_id, sp.duration_seconds AS override, p.duration_seconds AS pose_dur
