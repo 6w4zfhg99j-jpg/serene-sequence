@@ -145,8 +145,14 @@ function init(dbPath) {
   if (!seqCols.includes("practice_notes")) {
     db.exec("ALTER TABLE sequences ADD COLUMN practice_notes TEXT");
   }
+  // Trash: deleted sequences are kept for 7 days before being purged.
+  if (!seqCols.includes("deleted_at")) {
+    db.exec("ALTER TABLE sequences ADD COLUMN deleted_at TEXT");
+  }
   db.exec("CREATE INDEX IF NOT EXISTS idx_sequences_folder ON sequences(folder_id)");
   db.exec("CREATE INDEX IF NOT EXISTS idx_folders_parent ON folders(parent_id)");
+  purgeExpiredTrash();
+
 
   db.exec("CREATE TABLE IF NOT EXISTS app_meta (key TEXT PRIMARY KEY, value TEXT)");
   const metaGet = db.prepare("SELECT value FROM app_meta WHERE key = ?");
@@ -584,32 +590,70 @@ function seqTags(sequenceId) {
     .all(sequenceId);
 }
 
+/** Days a deleted sequence stays recoverable in the Trash. */
+const TRASH_DAYS = 7;
+
+/** Permanently removes sequences deleted more than TRASH_DAYS ago. */
+function purgeExpiredTrash() {
+  const cutoff = new Date(Date.now() - TRASH_DAYS * 86400000).toISOString();
+  db.prepare(
+    "DELETE FROM sequences WHERE deleted_at IS NOT NULL AND deleted_at < ?",
+  ).run(cutoff);
+}
+
 function listSequences() {
-  const seqs = db.prepare("SELECT * FROM sequences ORDER BY updated_at DESC").all();
+  purgeExpiredTrash();
+  const seqs = db
+    .prepare(
+      "SELECT * FROM sequences WHERE deleted_at IS NULL ORDER BY updated_at DESC",
+    )
+    .all();
+
   const items = db
     .prepare(
       `SELECT sp.sequence_id, sp.duration_seconds AS override, p.duration_seconds AS pose_dur
        FROM sequence_poses sp JOIN poses p ON p.id = sp.pose_id`,
     )
     .all();
-  return seqs.map((s) => {
-    const its = items.filter((i) => i.sequence_id === s.id);
-    return {
-      id: s.id,
-      title: s.title,
-      description: s.description,
-      level: s.level,
-      created_at: s.created_at,
-      updated_at: s.updated_at,
-      folder_id: s.folder_id ?? null,
-      pose_count: its.length,
-      total_duration_seconds: its.reduce(
-        (acc, i) => acc + (i.override ?? i.pose_dur ?? 0),
-        0,
-      ),
-      tags: seqTags(s.id),
-    };
-  });
+  return seqs.map((s) => mapSequenceRow(s, items));
+}
+
+function mapSequenceRow(s, items) {
+  const its = items.filter((i) => i.sequence_id === s.id);
+  return {
+    id: s.id,
+    title: s.title,
+    description: s.description,
+    level: s.level,
+    created_at: s.created_at,
+    updated_at: s.updated_at,
+    deleted_at: s.deleted_at ?? null,
+    folder_id: s.folder_id ?? null,
+    pose_count: its.length,
+    total_duration_seconds: its.reduce(
+      (acc, i) => acc + (i.override ?? i.pose_dur ?? 0),
+      0,
+    ),
+    tags: seqTags(s.id),
+  };
+}
+
+/** Sequences sitting in the Trash, newest deletion first. */
+function listTrashedSequences() {
+  purgeExpiredTrash();
+  const seqs = db
+    .prepare(
+      "SELECT * FROM sequences WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC",
+    )
+    .all();
+  const items = db
+    .prepare(
+      `SELECT sp.sequence_id, sp.duration_seconds AS override, p.duration_seconds AS pose_dur
+       FROM sequence_poses sp JOIN poses p ON p.id = sp.pose_id`,
+    )
+    .all();
+  return seqs.map((s) => mapSequenceRow(s, items));
+
 }
 
 function getSequence(id) {
@@ -695,9 +739,26 @@ function setSequenceTags(sequenceId, tagIds) {
   for (const tid of tagIds) ins.run(sequenceId, tid);
 }
 
+/** Soft delete — the sequence moves to the Trash for 7 days. */
 function deleteSequence(id) {
+  db.prepare("UPDATE sequences SET deleted_at = ? WHERE id = ?").run(now(), id);
+}
+
+/** Bring a sequence back out of the Trash. */
+function restoreSequence(id) {
+  db.prepare("UPDATE sequences SET deleted_at = NULL WHERE id = ?").run(id);
+}
+
+/** Remove a sequence for good. */
+function purgeSequence(id) {
   db.prepare("DELETE FROM sequences WHERE id = ?").run(id);
 }
+
+/** Empty the Trash. */
+function emptyTrash() {
+  db.prepare("DELETE FROM sequences WHERE deleted_at IS NOT NULL").run();
+}
+
 
 function duplicateSequence(id) {
   const src = getSequence(id);
@@ -809,6 +870,10 @@ module.exports = {
   moveFolder,
   reorderFolders,
   listSequences,
+  listTrashedSequences,
+  restoreSequence,
+  purgeSequence,
+  emptyTrash,
   getSequence,
   createSequence,
   updateSequence,

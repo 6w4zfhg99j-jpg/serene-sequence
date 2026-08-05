@@ -160,6 +160,10 @@ app.whenReady().then(() => {
   handle("folders.reorder", (_e, ids) => db.reorderFolders(ids));
 
   handle("sequences.list", () => db.listSequences());
+  handle("sequences.listTrash", () => db.listTrashedSequences());
+  handle("sequences.restore", (_e, id) => db.restoreSequence(id));
+  handle("sequences.purge", (_e, id) => db.purgeSequence(id));
+  handle("sequences.emptyTrash", () => db.emptyTrash());
   handle("sequences.get", (_e, id) => db.getSequence(id));
   handle("sequences.create", (_e, input) => db.createSequence(input));
   handle("sequences.update", (_e, id, patch) => db.updateSequence(id, patch));

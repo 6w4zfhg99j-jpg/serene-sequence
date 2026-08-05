@@ -79,6 +79,7 @@ export interface SequenceListItem {
   level: Level;
   created_at: string;
   updated_at: string;
+  deleted_at?: string | null;
   folder_id: string | null;
   pose_count: number;
   total_duration_seconds: number;
@@ -566,6 +567,7 @@ export async function fetchSequences(): Promise<SequenceListItem[]> {
        tags:sequence_tags(tag:tags(id,name)),
        items:sequence_poses(duration_seconds, pose:poses(duration_seconds))`,
     )
+    .is("deleted_at", null)
     .order("updated_at", { ascending: false });
   if (error) throw error;
   return (data ?? []).map((r: any) => ({
@@ -659,10 +661,87 @@ export async function setSequenceTags(sequenceId: string, tagIds: string[]) {
   }
 }
 
+/** Days a deleted sequence can still be restored from the Trash. */
+export const TRASH_RETENTION_DAYS = 7;
+
+/** Days left before a trashed sequence is purged automatically. */
+export function trashDaysLeft(deletedAt: string | null | undefined): number {
+  if (!deletedAt) return TRASH_RETENTION_DAYS;
+  const elapsed = (Date.now() - new Date(deletedAt).getTime()) / 86400000;
+  return Math.max(0, Math.ceil(TRASH_RETENTION_DAYS - elapsed));
+}
+
+/** Soft delete — the sequence moves to the Trash for 7 days. */
 export async function deleteSequence(id: string) {
   const local = localBridge();
   if (local) return local.sequences.remove(id);
+  const { error } = await supabase
+    .from("sequences")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+/** Sequences currently in the Trash; expired ones are purged first. */
+export async function fetchTrashedSequences(): Promise<SequenceListItem[]> {
+  const local = localBridge();
+  if (local) return local.sequences.listTrash?.() ?? [];
+  const cutoff = new Date(
+    Date.now() - TRASH_RETENTION_DAYS * 86400000,
+  ).toISOString();
+  await supabase.from("sequences").delete().lt("deleted_at", cutoff);
+  const { data, error } = await supabase
+    .from("sequences")
+    .select(
+      `id, title, description, level, created_at, updated_at, deleted_at, folder_id,
+       tags:sequence_tags(tag:tags(id,name)),
+       items:sequence_poses(id)`,
+    )
+    .not("deleted_at", "is", null)
+    .order("deleted_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map((r: any) => ({
+    id: r.id,
+    title: r.title,
+    description: r.description,
+    level: r.level,
+    created_at: r.created_at,
+    updated_at: r.updated_at,
+    deleted_at: r.deleted_at,
+    folder_id: r.folder_id ?? null,
+    pose_count: r.items?.length ?? 0,
+    total_duration_seconds: 0,
+    tags: (r.tags ?? []).map((t: any) => t.tag).filter(Boolean),
+  }));
+}
+
+/** Restore a sequence out of the Trash. */
+export async function restoreSequence(id: string) {
+  const local = localBridge();
+  if (local) return local.sequences.restore?.(id);
+  const { error } = await supabase
+    .from("sequences")
+    .update({ deleted_at: null })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+/** Delete a sequence for good. */
+export async function purgeSequence(id: string) {
+  const local = localBridge();
+  if (local) return local.sequences.purge?.(id);
   const { error } = await supabase.from("sequences").delete().eq("id", id);
+  if (error) throw error;
+}
+
+/** Empty the whole Trash. */
+export async function emptyTrash() {
+  const local = localBridge();
+  if (local) return local.sequences.emptyTrash?.();
+  const { error } = await supabase
+    .from("sequences")
+    .delete()
+    .not("deleted_at", "is", null);
   if (error) throw error;
 }
 

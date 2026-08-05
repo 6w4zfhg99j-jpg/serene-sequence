@@ -72,7 +72,15 @@ async function toDataUrl(url: string): Promise<string> {
   return blobToDataUrl(await res.blob());
 }
 
-/** Loads and decodes an image so jsPDF receives valid, correctly typed data. */
+/** Longest edge (px) kept for embedded photos — plenty for print/retina cards. */
+const MAX_IMAGE_EDGE = 720;
+/** JPEG quality: ~30% smaller files with no visible loss at card size. */
+const JPEG_QUALITY = 0.7;
+
+/**
+ * Loads, downscales and re-encodes an image so jsPDF embeds a compact JPEG
+ * instead of the original full-resolution bitmap.
+ */
 async function loadImageAsDataUrl(url: string): Promise<LoadedImage | null> {
   if (imageCache.has(url)) return imageCache.get(url) ?? null;
   let result: LoadedImage | null = null;
@@ -82,30 +90,28 @@ async function loadImageAsDataUrl(url: string): Promise<LoadedImage | null> {
     if (!img.naturalWidth || !img.naturalHeight) {
       throw new Error(`image has zero dimensions: ${url}`);
     }
-    const isPng = dataUrl.startsWith("data:image/png");
-    const isJpeg = /^data:image\/jpe?g/.test(dataUrl);
-    if (isPng || isJpeg) {
-      result = {
-        dataUrl,
-        format: isPng ? "PNG" : "JPEG",
-        w: img.naturalWidth,
-        h: img.naturalHeight,
-      };
-    } else {
-      // webp/gif/etc — re-encode to PNG, which jsPDF can embed.
-      const canvas = document.createElement("canvas");
-      canvas.width = img.naturalWidth;
-      canvas.height = img.naturalHeight;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) throw new Error("2d canvas context unavailable");
-      ctx.drawImage(img, 0, 0);
-      result = {
-        dataUrl: canvas.toDataURL("image/png"),
-        format: "PNG",
-        w: img.naturalWidth,
-        h: img.naturalHeight,
-      };
-    }
+    const ratio = Math.min(
+      1,
+      MAX_IMAGE_EDGE / Math.max(img.naturalWidth, img.naturalHeight),
+    );
+    const w = Math.max(1, Math.round(img.naturalWidth * ratio));
+    const h = Math.max(1, Math.round(img.naturalHeight * ratio));
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("2d canvas context unavailable");
+    // Flatten onto the card background so transparency does not turn black.
+    ctx.fillStyle = "#faf9f6";
+    ctx.fillRect(0, 0, w, h);
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(img, 0, 0, w, h);
+    result = {
+      dataUrl: canvas.toDataURL("image/jpeg", JPEG_QUALITY),
+      format: "JPEG",
+      w,
+      h,
+    };
   } catch (err) {
     console.error("[pdf] could not load image", url, err);
     result = null;
@@ -113,6 +119,7 @@ async function loadImageAsDataUrl(url: string): Promise<LoadedImage | null> {
   imageCache.set(url, result);
   return result;
 }
+
 
 
 export type PdfFormat = "a4" | "screen";
@@ -259,7 +266,44 @@ export async function exportSequenceGridPdf(
     maxScale,
     Math.max(0.9, cardW / (isScreen ? 26 : 36))
   );
-  const labelH = (isScreen ? (hasNotes ? 10 : 7) : hasNotes ? 16 : 9) * (dense ? 1 : scale);
+  // Text metrics — every card reserves the exact space its wrapped title,
+  // side marker and note need, so nothing can overlap the row above.
+  const nameSize = (isScreen ? 7 : 7.5) * scale;
+  const nameLead = (isScreen ? 2.7 : 3) * scale;
+  const sideSize = (isScreen ? 5.8 : 6.5) * scale;
+  const sideLead = (isScreen ? 2.3 : 2.6) * scale;
+  const noteSize = (isScreen ? 5.2 : 5.8) * scale;
+  const noteLead = (isScreen ? 2.1 : 2.3) * scale;
+  const maxNameLines = 3;
+  const maxNoteLines = isScreen ? 2 : 3;
+  const labelTop = 3;
+  const labelBottom = 1.5 * scale;
+
+  measure.setFont("helvetica", "normal");
+  const cardText = seq.items.map((it) => {
+    measure.setFontSize(nameSize);
+    const nameLines = (
+      measure.splitTextToSize(it.pose.name, cardW - 1) as string[]
+    ).slice(0, maxNameLines);
+    measure.setFontSize(noteSize);
+    const noteLines =
+      withNotes && it.notes
+        ? (measure.splitTextToSize(it.notes, cardW - 1) as string[]).slice(
+            0,
+            maxNoteLines
+          )
+        : [];
+    const height =
+      labelTop +
+      nameLines.length * nameLead +
+      (it.side ? sideLead : 0) +
+      noteLines.length * noteLead +
+      labelBottom;
+    return { nameLines, noteLines, height };
+  });
+  const maxLabelH = cardText.length
+    ? Math.max(...cardText.map((c) => c.height))
+    : (hasNotes ? 10 : 7) * scale;
 
   // Practice notes live in the upper-right corner, clear of the sequence grid.
   const notesW = (pageW - margin * 2) * 0.38;
@@ -276,22 +320,32 @@ export async function exportSequenceGridPdf(
   let imgH = cardW;
   if (isScreen) {
     const avail = baseH - firstTop - margin - footerH;
-    imgH = Math.max(12, (avail - gap * (screenRows - 1)) / screenRows - labelH);
+    imgH = Math.max(12, (avail - gap * (screenRows - 1)) / screenRows - maxLabelH);
   }
-  const cardH = imgH + labelH;
+
+  // Each row grows to fit its tallest label block; spacing stays uniform.
+  const rows = Math.max(1, Math.ceil(seq.items.length / cols));
+  const rowLabelH: number[] = [];
+  for (let r = 0; r < rows; r++) {
+    const slice = cardText.slice(r * cols, r * cols + cols);
+    rowLabelH.push(
+      slice.length ? Math.max(...slice.map((c) => c.height)) : maxLabelH
+    );
+  }
+  const gridH =
+    rowLabelH.reduce((sum, h) => sum + imgH + h + gap, 0) - gap;
 
   // One continuous page: extend the document height to fit every row.
-  const rows = Math.max(1, Math.ceil(seq.items.length / cols));
-  const pageH = Math.max(
-    baseH,
-    firstTop + rows * (cardH + gap) - gap + footerH + margin
-  );
+  const pageH = Math.max(baseH, firstTop + gridH + footerH + margin);
+
 
   const doc = new jsPDF({
     unit: "mm",
     orientation: pageH >= pageW ? "portrait" : "landscape",
     format: [pageW, pageH],
+    compress: true,
   });
+
 
 
 
@@ -346,11 +400,11 @@ export async function exportSequenceGridPdf(
   drawHeader();
   let y = firstTop;
   let col = 0;
+  let row = 0;
 
   for (let i = 0; i < seq.items.length; i++) {
-
-
     const it = seq.items[i];
+    const text = cardText[i];
     const x = margin + col * (cardW + gap);
 
     // Image box — rounded card matching the app's card style
@@ -381,7 +435,9 @@ export async function exportSequenceGridPdf(
               x + (cardW - w) / 2,
               y + (imgH - h) / 2,
               w,
-              h
+              h,
+              undefined,
+              "FAST"
             );
           } catch (err) {
             console.error("[pdf] failed to embed image", url, err);
@@ -390,54 +446,48 @@ export async function exportSequenceGridPdf(
       }
     }
 
-
     // Index badge
     doc.setFont("times", "italic");
     doc.setFontSize(isScreen ? 6.5 : 8);
     doc.setTextColor(muted);
     doc.text(String(i + 1).padStart(2, "0"), x + 1.2, y + (isScreen ? 3.6 : 4.5));
 
-    // Name
-    const nameLead = (isScreen ? 2.7 : 3) * scale;
+    // Name — wraps onto up to three lines, space is reserved by the row height
     doc.setFont("helvetica", "normal");
-    doc.setFontSize((isScreen ? 7 : 7.5) * scale);
+    doc.setFontSize(nameSize);
     doc.setTextColor(ink);
-    const nameLines = doc
-      .splitTextToSize(it.pose.name, cardW - 1)
-      .slice(0, 2) as string[];
-    nameLines.forEach((ln, li) => {
-      doc.text(ln, x + cardW / 2, y + imgH + 3 + li * nameLead, { align: "center" });
+    text.nameLines.forEach((ln, li) => {
+      doc.text(ln, x + cardW / 2, y + imgH + labelTop + li * nameLead, {
+        align: "center",
+      });
     });
 
     // Side marker (no durations — sequences focus on order and cues)
-    let ty = y + imgH + 3 + nameLines.length * nameLead;
+    let ty = y + imgH + labelTop + text.nameLines.length * nameLead;
     if (it.side) {
-      doc.setFontSize((isScreen ? 5.8 : 6.5) * scale);
+      doc.setFontSize(sideSize);
       doc.setTextColor(muted);
       doc.text(it.side, x + cardW / 2, ty, { align: "center" });
-      ty += (isScreen ? 2.3 : 2.6) * scale;
+      ty += sideLead;
     }
 
     // Pose note — small, light grey, directly under the name
-    if (withNotes && it.notes) {
-      doc.setFontSize((isScreen ? 5.2 : 5.8) * scale);
+    if (text.noteLines.length) {
+      doc.setFontSize(noteSize);
       doc.setTextColor(150, 146, 138);
-      const noteLines = doc
-        .splitTextToSize(it.notes, cardW - 1)
-        .slice(0, isScreen ? 2 : 3) as string[];
-      noteLines.forEach((ln, li) => {
-        doc.text(ln, x + cardW / 2, ty + li * (isScreen ? 2.1 : 2.3) * scale, { align: "center" });
+      text.noteLines.forEach((ln, li) => {
+        doc.text(ln, x + cardW / 2, ty + li * noteLead, { align: "center" });
       });
     }
-
 
     col += 1;
     if (col === cols) {
       col = 0;
-      y += cardH + gap;
+      y += imgH + rowLabelH[row] + gap;
+      row += 1;
     }
-
   }
+
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);

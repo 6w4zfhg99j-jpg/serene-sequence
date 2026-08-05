@@ -67,6 +67,10 @@ export interface LocalBridge {
 
   sequences: {
     list(): Promise<SequenceListItem[]>;
+    listTrash?(): Promise<SequenceListItem[]>;
+    restore?(id: string): Promise<void>;
+    purge?(id: string): Promise<void>;
+    emptyTrash?(): Promise<void>;
     get(id: string): Promise<Sequence>;
     create(input: {
       title: string;
