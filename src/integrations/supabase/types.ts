@@ -294,6 +294,7 @@ export type Database = {
       sequences: {
         Row: {
           created_at: string
+          deleted_at: string | null
           description: string | null
           folder_id: string | null
           id: string
@@ -304,6 +305,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           folder_id?: string | null
           id?: string
@@ -314,6 +316,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           folder_id?: string | null
           id?: string
