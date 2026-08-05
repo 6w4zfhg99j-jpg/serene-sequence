@@ -537,5 +537,13 @@ export async function exportSequenceGridPdf(
   doc.text(INSTAGRAM, pageW / 2, pageH - 6, { align: "center" });
 
 
-  doc.save(`${seq.title.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-grid.pdf`);
+  // Keep non-Latin titles in the filename instead of collapsing them to "-".
+  const slug =
+    seq.title
+      .trim()
+      .replace(/[^\p{L}\p{N}]+/gu, "-")
+      .replace(/^-+|-+$/g, "")
+      .toLowerCase() || "sequence";
+  doc.save(`${slug}-grid.pdf`);
+
 }
