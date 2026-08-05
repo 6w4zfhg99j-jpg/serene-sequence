@@ -44,6 +44,10 @@ contextBridge.exposeInMainWorld("yoga", {
 
   sequences: {
     list: () => invoke("sequences.list"),
+    listTrash: () => invoke("sequences.listTrash"),
+    restore: (id) => invoke("sequences.restore", id),
+    purge: (id) => invoke("sequences.purge", id),
+    emptyTrash: () => invoke("sequences.emptyTrash"),
     get: (id) => invoke("sequences.get", id),
     create: (input) => invoke("sequences.create", input),
     update: (id, patch) => invoke("sequences.update", id, patch),
