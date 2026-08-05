@@ -193,8 +193,9 @@ function Home() {
     s.title.toLowerCase().includes(search.toLowerCase()),
   );
 
-  const heading =
-    selection.kind === "all"
+  const heading = showTrash
+    ? t("home.trashHeading")
+    : selection.kind === "all"
       ? t("home.heading")
       : selection.kind === "unfiled"
         ? t("home.mainArea")
@@ -207,7 +208,7 @@ function Home() {
           <p className="label-eyebrow">{t("home.eyebrow")}</p>
           <h1 className="mt-1 font-serif text-5xl">{heading}</h1>
           <p className="mt-2 max-w-lg text-sm text-ink-muted">
-            {t("home.description")}
+            {showTrash ? t("home.trashDescription") : t("home.description")}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -241,10 +242,89 @@ function Home() {
             onDelete={(id) => removeFolder.mutate(id)}
             onDropSequence={(id, folderId) => move.mutate({ id, folderId })}
           />
+          <button
+            type="button"
+            onClick={() => setShowTrash((v) => !v)}
+            className={`mt-2 flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors ${
+              showTrash
+                ? "bg-surface text-ink"
+                : "text-ink-muted hover:bg-surface hover:text-ink"
+            }`}
+          >
+            <Trash2 className="size-4" strokeWidth={1.5} />
+            <span className="flex-1 text-left">{t("home.trash")}</span>
+            {trashed.length > 0 && (
+              <span className="text-xs text-ink-subtle">{trashed.length}</span>
+            )}
+          </button>
         </aside>
 
         <div>
-          {isLoading ? (
+          {showTrash ? (
+            trashed.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-line p-20 text-center">
+                <h2 className="font-serif text-3xl">{t("home.trashEmpty")}</h2>
+                <p className="mt-2 text-sm text-ink-muted">
+                  {t("home.trashEmptyHint")}
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="mb-3 flex justify-end">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => clearTrash.mutate()}
+                  >
+                    {t("home.emptyTrash")}
+                  </Button>
+                </div>
+                <ul className="divide-y divide-line rounded-2xl border border-line bg-surface">
+                  {trashed.map((s) => {
+                    const left = trashDaysLeft(s.deleted_at);
+                    return (
+                      <li
+                        key={s.id}
+                        className="group flex items-center gap-3 px-4 py-4"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <h3 className="truncate font-serif text-xl text-ink-muted">
+                            {s.title}
+                          </h3>
+                          <div className="mt-1 flex flex-wrap items-center gap-x-4 text-xs text-ink-subtle">
+                            <span>
+                              {s.pose_count} {t("common.poses")}
+                            </span>
+                            <span>
+                              {left <= 1
+                                ? t("home.lastDay")
+                                : `${left} ${t("home.daysLeft")}`}
+                            </span>
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => restore.mutate(s.id)}
+                          title={t("home.restore")}
+                        >
+                          <RotateCcw className="size-4" strokeWidth={1.5} />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => purge.mutate(s.id)}
+                          title={t("home.deleteForever")}
+                        >
+                          <Trash2 className="size-4" strokeWidth={1.5} />
+                        </Button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </>
+            )
+          ) : isLoading ? (
             <p className="text-sm text-ink-muted">{t("common.loading")}</p>
           ) : filtered.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-line p-20 text-center">
