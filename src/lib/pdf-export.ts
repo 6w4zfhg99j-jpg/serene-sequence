@@ -1,5 +1,26 @@
 import { jsPDF } from "jspdf";
 import { getSignedImageUrls, type Sequence } from "@/lib/yoga-api";
+import {
+  VONA_SANS_TTF_BASE64,
+  VONA_SERIF_ITALIC_TTF_BASE64,
+} from "@/lib/pdf-fonts";
+
+/** Font names used everywhere in the export (Unicode: Latin + Cyrillic). */
+const SANS = "VonaSans";
+const SERIF = "VonaSerif";
+
+/**
+ * Registers the embedded Unicode fonts on a jsPDF instance. jsPDF's built-in
+ * Helvetica/Times are WinAnsi-only, so Ukrainian/Russian titles came out as
+ * garbage; these subsets cover Latin, Cyrillic and Greek.
+ */
+function registerFonts(doc: jsPDF) {
+  doc.addFileToVFS("VonaSans.ttf", VONA_SANS_TTF_BASE64);
+  doc.addFont("VonaSans.ttf", SANS, "normal");
+  doc.addFileToVFS("VonaSerifItalic.ttf", VONA_SERIF_ITALIC_TTF_BASE64);
+  doc.addFont("VonaSerifItalic.ttf", SERIF, "italic");
+}
+
 import { localBridge } from "@/lib/local-bridge";
 
 /** Paths that the browser/Electron renderer can load directly. */
