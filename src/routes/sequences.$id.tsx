@@ -403,6 +403,11 @@ function SequenceEditor() {
                       key={it.id}
                       item={it}
                       index={idx}
+                      highlight={highlightId === it.id}
+                      rowRef={(el) => {
+                        if (el) itemRefs.current.set(it.id, el);
+                        else itemRefs.current.delete(it.id);
+                      }}
                       onRemove={() => removeItem.mutate(it.id)}
                       onDuplicate={() => dupItem.mutate(it)}
                       onPatch={(p) => patchItem.mutate({ id: it.id, patch: p })}
