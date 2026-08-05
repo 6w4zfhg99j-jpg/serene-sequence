@@ -398,11 +398,11 @@ export async function exportSequenceGridPdf(
   drawHeader();
   let y = firstTop;
   let col = 0;
+  let row = 0;
 
   for (let i = 0; i < seq.items.length; i++) {
-
-
     const it = seq.items[i];
+    const text = cardText[i];
     const x = margin + col * (cardW + gap);
 
     // Image box — rounded card matching the app's card style
@@ -433,7 +433,9 @@ export async function exportSequenceGridPdf(
               x + (cardW - w) / 2,
               y + (imgH - h) / 2,
               w,
-              h
+              h,
+              undefined,
+              "FAST"
             );
           } catch (err) {
             console.error("[pdf] failed to embed image", url, err);
@@ -442,54 +444,48 @@ export async function exportSequenceGridPdf(
       }
     }
 
-
     // Index badge
     doc.setFont("times", "italic");
     doc.setFontSize(isScreen ? 6.5 : 8);
     doc.setTextColor(muted);
     doc.text(String(i + 1).padStart(2, "0"), x + 1.2, y + (isScreen ? 3.6 : 4.5));
 
-    // Name
-    const nameLead = (isScreen ? 2.7 : 3) * scale;
+    // Name — wraps onto up to three lines, space is reserved by the row height
     doc.setFont("helvetica", "normal");
-    doc.setFontSize((isScreen ? 7 : 7.5) * scale);
+    doc.setFontSize(nameSize);
     doc.setTextColor(ink);
-    const nameLines = doc
-      .splitTextToSize(it.pose.name, cardW - 1)
-      .slice(0, 2) as string[];
-    nameLines.forEach((ln, li) => {
-      doc.text(ln, x + cardW / 2, y + imgH + 3 + li * nameLead, { align: "center" });
+    text.nameLines.forEach((ln, li) => {
+      doc.text(ln, x + cardW / 2, y + imgH + labelTop + li * nameLead, {
+        align: "center",
+      });
     });
 
     // Side marker (no durations — sequences focus on order and cues)
-    let ty = y + imgH + 3 + nameLines.length * nameLead;
+    let ty = y + imgH + labelTop + text.nameLines.length * nameLead;
     if (it.side) {
-      doc.setFontSize((isScreen ? 5.8 : 6.5) * scale);
+      doc.setFontSize(sideSize);
       doc.setTextColor(muted);
       doc.text(it.side, x + cardW / 2, ty, { align: "center" });
-      ty += (isScreen ? 2.3 : 2.6) * scale;
+      ty += sideLead;
     }
 
     // Pose note — small, light grey, directly under the name
-    if (withNotes && it.notes) {
-      doc.setFontSize((isScreen ? 5.2 : 5.8) * scale);
+    if (text.noteLines.length) {
+      doc.setFontSize(noteSize);
       doc.setTextColor(150, 146, 138);
-      const noteLines = doc
-        .splitTextToSize(it.notes, cardW - 1)
-        .slice(0, isScreen ? 2 : 3) as string[];
-      noteLines.forEach((ln, li) => {
-        doc.text(ln, x + cardW / 2, ty + li * (isScreen ? 2.1 : 2.3) * scale, { align: "center" });
+      text.noteLines.forEach((ln, li) => {
+        doc.text(ln, x + cardW / 2, ty + li * noteLead, { align: "center" });
       });
     }
-
 
     col += 1;
     if (col === cols) {
       col = 0;
-      y += cardH + gap;
+      y += imgH + rowLabelH[row] + gap;
+      row += 1;
     }
-
   }
+
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
