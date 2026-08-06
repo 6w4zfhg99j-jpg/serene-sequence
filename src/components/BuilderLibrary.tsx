@@ -87,11 +87,20 @@ export function BuilderLibrary({ poses, categories, subcategories = [], onAdd }:
   const catLabel = useCategoryLabel();
 
   function toggle(id: string) {
-    setCollapsed((c) => ({ ...c, [id]: !c[id] }));
-  }
-
-  function expandAll() {
-    setCollapsed({});
+    setCollapsed((c) => {
+      const isCurrentlyCollapsed = !!c[id];
+      if (isCurrentlyCollapsed) {
+        // Opening this category: collapse all others (accordion behavior).
+        const next: Record<string, boolean> = {};
+        for (const g of grouped) {
+          const gid = g.cat?.id ?? OTHER;
+          if (gid !== id) next[gid] = true;
+        }
+        return next;
+      }
+      // Closing this category.
+      return { ...c, [id]: true };
+    });
   }
 
   function collapseAll() {
