@@ -163,13 +163,6 @@ export function BuilderLibrary({ poses, categories, subcategories = [], onAdd }:
       <div className="mb-2 flex items-center gap-1">
         <button
           type="button"
-          onClick={expandAll}
-          className="rounded-md border border-line px-2 py-0.5 text-[11px] text-ink-muted transition-colors hover:border-ink-muted hover:text-ink"
-        >
-          {t("common.expandAll")}
-        </button>
-        <button
-          type="button"
           onClick={collapseAll}
           className="rounded-md border border-line px-2 py-0.5 text-[11px] text-ink-muted transition-colors hover:border-ink-muted hover:text-ink"
         >
