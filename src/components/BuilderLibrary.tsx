@@ -87,11 +87,20 @@ export function BuilderLibrary({ poses, categories, subcategories = [], onAdd }:
   const catLabel = useCategoryLabel();
 
   function toggle(id: string) {
-    setCollapsed((c) => ({ ...c, [id]: !c[id] }));
-  }
-
-  function expandAll() {
-    setCollapsed({});
+    setCollapsed((c) => {
+      const isCurrentlyCollapsed = !!c[id];
+      if (isCurrentlyCollapsed) {
+        // Opening this category: collapse all others (accordion behavior).
+        const next: Record<string, boolean> = {};
+        for (const g of grouped) {
+          const gid = g.cat?.id ?? OTHER;
+          if (gid !== id) next[gid] = true;
+        }
+        return next;
+      }
+      // Closing this category.
+      return { ...c, [id]: true };
+    });
   }
 
   function collapseAll() {
@@ -152,13 +161,6 @@ export function BuilderLibrary({ poses, categories, subcategories = [], onAdd }:
       </div>
 
       <div className="mb-2 flex items-center gap-1">
-        <button
-          type="button"
-          onClick={expandAll}
-          className="rounded-md border border-line px-2 py-0.5 text-[11px] text-ink-muted transition-colors hover:border-ink-muted hover:text-ink"
-        >
-          {t("common.expandAll")}
-        </button>
         <button
           type="button"
           onClick={collapseAll}
