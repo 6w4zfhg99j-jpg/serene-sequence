@@ -182,13 +182,15 @@ function SequenceEditor() {
     prevIds.current = curIds;
     if (added.length > 0) {
       const target = added[added.length - 1];
-      // wait a tick for the new row to be mounted
-      requestAnimationFrame(() => {
-        const el = itemRefs.current.get(target.id);
-        if (el) {
-          el.scrollIntoView({ behavior: "smooth", block: "end" });
-        }
-      });
+      // Only auto-scroll once the sequence reaches 10+ poses
+      if (seq.items.length >= 10) {
+        requestAnimationFrame(() => {
+          const el = itemRefs.current.get(target.id);
+          if (el) {
+            el.scrollIntoView({ behavior: "smooth", block: "end" });
+          }
+        });
+      }
       setHighlightId(target.id);
       const timer = setTimeout(() => setHighlightId(null), 1600);
       return () => clearTimeout(timer);
