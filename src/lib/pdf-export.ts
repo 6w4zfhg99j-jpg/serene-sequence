@@ -527,14 +527,34 @@ export async function exportSequenceGridPdf(
       ty += sideLead;
     }
 
-    // Pose note — small, light grey, directly under the name
+    // Pose note — small and light grey; **bold** spans render in full ink so
+    // section titles and key cues still stand out without a bold font file.
     if (text.noteLines.length) {
       doc.setFontSize(noteSize);
-      doc.setTextColor(150, 146, 138);
+      const plainLine = (li: number) => text.noteLines[li];
       text.noteLines.forEach((ln, li) => {
-        doc.text(ln, x + cardW / 2, ty + li * noteLead, { align: "center" });
+        const start = text.noteOffsets[li] ?? 0;
+        const segs = text.noteRanges.length
+          ? segmentsFor(
+              plainLine(li),
+              text.noteRanges.map((r) => ({
+                start: r.start - start,
+                end: r.end - start,
+              })),
+            )
+          : [{ text: ln, bold: false }];
+        const widths = segs.map((s) => doc.getTextWidth(s.text));
+        let sx = x + cardW / 2 - widths.reduce((a, b) => a + b, 0) / 2;
+        segs.forEach((s, si) => {
+          if (s.bold) doc.setTextColor(ink);
+          else doc.setTextColor(150, 146, 138);
+          doc.text(s.text, sx, ty + li * noteLead);
+          sx += widths[si];
+        });
       });
+      doc.setTextColor(150, 146, 138);
     }
+
 
     col += 1;
     if (col === cols) {
