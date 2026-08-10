@@ -58,7 +58,7 @@ export function PoseFormDialog({ open, onOpenChange, pose }: Props) {
   const [name, setName] = useState("");
   const [sanskrit, setSanskrit] = useState("");
   const [description, setDescription] = useState("");
-  const [duration, setDuration] = useState("");
+  
   const [difficulty, setDifficulty] = useState<Difficulty>("beginner");
   const [imagePath, setImagePath] = useState<string | null>(null);
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
@@ -73,7 +73,7 @@ export function PoseFormDialog({ open, onOpenChange, pose }: Props) {
     setName(pose?.name ?? "");
     setSanskrit(pose?.sanskrit_name ?? "");
     setDescription(pose?.description ?? "");
-    setDuration(pose?.duration_seconds ? String(pose.duration_seconds) : "");
+    
     setDifficulty((pose?.difficulty as Difficulty) ?? "beginner");
     setImagePath(pose?.image_url ?? null);
     setCategoryIds(pose?.categories.map((c) => c.id) ?? []);
@@ -106,7 +106,7 @@ export function PoseFormDialog({ open, onOpenChange, pose }: Props) {
         name: name.trim(),
         sanskrit_name: sanskrit.trim() || null,
         description: description.trim() || null,
-        duration_seconds: duration ? Number(duration) : null,
+        duration_seconds: pose?.duration_seconds ?? null,
         difficulty,
         image_url: imagePath,
         is_favorite: pose?.is_favorite ?? false,
