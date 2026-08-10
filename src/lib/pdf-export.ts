@@ -310,21 +310,34 @@ export async function exportSequenceGridPdf(
       measure.splitTextToSize(it.pose.name, cardW - 1) as string[]
     ).slice(0, maxNameLines);
     measure.setFontSize(noteSize);
+    // Notes carry markdown-style **bold** markers; strip them for layout and
+    // keep the ranges so emphasis can be re-applied when drawing.
+    const note = it.notes ? parseBold(it.notes) : { plain: "", ranges: [] };
     const noteLines =
-      withNotes && it.notes
-        ? (measure.splitTextToSize(it.notes, cardW - 1) as string[]).slice(
+      withNotes && note.plain
+        ? (measure.splitTextToSize(note.plain, cardW - 1) as string[]).slice(
             0,
             maxNoteLines
           )
         : [];
+    // Character offset of each wrapped line inside the plain text.
+    const noteOffsets: number[] = [];
+    let cursor = 0;
+    for (const ln of noteLines) {
+      const at = note.plain.indexOf(ln, cursor);
+      const start = at === -1 ? cursor : at;
+      noteOffsets.push(start);
+      cursor = start + ln.length;
+    }
     const height =
       labelTop +
       nameLines.length * nameLead +
       (it.side ? sideLead : 0) +
       noteLines.length * noteLead +
       labelBottom;
-    return { nameLines, noteLines, height };
+    return { nameLines, noteLines, noteOffsets, noteRanges: note.ranges, height };
   });
+
   const maxLabelH = cardText.length
     ? Math.max(...cardText.map((c) => c.height))
     : (hasNotes ? 10 : 7) * scale;
