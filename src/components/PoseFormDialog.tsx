@@ -221,44 +221,33 @@ export function PoseFormDialog({ open, onOpenChange, pose }: Props) {
                 placeholder="e.g. Adho Mukha Svanasana"
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>{t("pose.duration")}</Label>
-                <Input
-                  type="number"
-                  value={duration}
-                  onChange={(e) => setDuration(e.target.value)}
-                />
-              </div>
-              <div>
-                <Label>{t("pose.difficulty")}</Label>
-                <Select
-                  value={difficulty}
-                  onValueChange={(v) => setDifficulty(v as Difficulty)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DIFFICULTIES.map((d) => (
-                      <SelectItem key={d} value={d} className="capitalize">
-                        {d}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
             <div>
-              <Label>{t("pose.notes")}</Label>
-              <Textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={3}
-              />
+              <Label>{t("pose.difficulty")}</Label>
+              <Select
+                value={difficulty}
+                onValueChange={(v) => setDifficulty(v as Difficulty)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {DIFFICULTIES.map((d) => (
+                    <SelectItem key={d} value={d} className="capitalize">
+                      {d}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
+
+        {/* Note / description — full width, below photo and pose info */}
+        <div>
+          <Label className="mb-1.5 block">{t("pose.notes")}</Label>
+          <RichNoteEditor value={description} onChange={setDescription} rows={5} />
+        </div>
+
 
         <div className="space-y-3">
           <div>
