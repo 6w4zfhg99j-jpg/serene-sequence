@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { RichNoteEditor } from "@/components/RichNoteEditor";
 import {
   Select,
   SelectContent,
@@ -58,7 +58,7 @@ export function PoseFormDialog({ open, onOpenChange, pose }: Props) {
   const [name, setName] = useState("");
   const [sanskrit, setSanskrit] = useState("");
   const [description, setDescription] = useState("");
-  const [duration, setDuration] = useState("");
+  
   const [difficulty, setDifficulty] = useState<Difficulty>("beginner");
   const [imagePath, setImagePath] = useState<string | null>(null);
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
@@ -73,7 +73,7 @@ export function PoseFormDialog({ open, onOpenChange, pose }: Props) {
     setName(pose?.name ?? "");
     setSanskrit(pose?.sanskrit_name ?? "");
     setDescription(pose?.description ?? "");
-    setDuration(pose?.duration_seconds ? String(pose.duration_seconds) : "");
+    
     setDifficulty((pose?.difficulty as Difficulty) ?? "beginner");
     setImagePath(pose?.image_url ?? null);
     setCategoryIds(pose?.categories.map((c) => c.id) ?? []);
@@ -106,7 +106,7 @@ export function PoseFormDialog({ open, onOpenChange, pose }: Props) {
         name: name.trim(),
         sanskrit_name: sanskrit.trim() || null,
         description: description.trim() || null,
-        duration_seconds: duration ? Number(duration) : null,
+        duration_seconds: pose?.duration_seconds ?? null,
         difficulty,
         image_url: imagePath,
         is_favorite: pose?.is_favorite ?? false,
@@ -221,44 +221,33 @@ export function PoseFormDialog({ open, onOpenChange, pose }: Props) {
                 placeholder="e.g. Adho Mukha Svanasana"
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>{t("pose.duration")}</Label>
-                <Input
-                  type="number"
-                  value={duration}
-                  onChange={(e) => setDuration(e.target.value)}
-                />
-              </div>
-              <div>
-                <Label>{t("pose.difficulty")}</Label>
-                <Select
-                  value={difficulty}
-                  onValueChange={(v) => setDifficulty(v as Difficulty)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DIFFICULTIES.map((d) => (
-                      <SelectItem key={d} value={d} className="capitalize">
-                        {d}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
             <div>
-              <Label>{t("pose.notes")}</Label>
-              <Textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={3}
-              />
+              <Label>{t("pose.difficulty")}</Label>
+              <Select
+                value={difficulty}
+                onValueChange={(v) => setDifficulty(v as Difficulty)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {DIFFICULTIES.map((d) => (
+                    <SelectItem key={d} value={d} className="capitalize">
+                      {d}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
+
+        {/* Note / description — full width, below photo and pose info */}
+        <div>
+          <Label className="mb-1.5 block">{t("pose.notes")}</Label>
+          <RichNoteEditor value={description} onChange={setDescription} rows={5} />
+        </div>
+
 
         <div className="space-y-3">
           <div>

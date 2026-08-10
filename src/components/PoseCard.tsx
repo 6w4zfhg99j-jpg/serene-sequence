@@ -3,6 +3,7 @@ import type { Pose } from "@/lib/yoga-api";
 import { PoseImage } from "./PoseImage";
 import { useT } from "@/lib/i18n";
 import { useCategoryLabel } from "@/lib/i18n/categories";
+import { RichText } from "@/lib/rich-text";
 
 interface Props {
   pose: Pose;
@@ -128,6 +129,14 @@ export function PoseCard({ pose, onClick, onFavorite, onAdd, compact, dense }: P
         {pose.sanskrit_name && !compact && (
           <p className="mt-0.5 text-xs italic text-ink-muted">{pose.sanskrit_name}</p>
         )}
+        {pose.description && !compact && (
+          <div className="mt-2 w-full border-t border-line pt-2">
+            <RichText
+              text={pose.description}
+              className="block text-xs leading-relaxed text-ink-muted"
+            />
+          </div>
+        )}
         {!compact && (
           <div className="mt-2 flex flex-wrap gap-1">
             {pose.categories.slice(0, 2).map((c) => (
@@ -146,6 +155,7 @@ export function PoseCard({ pose, onClick, onFavorite, onAdd, compact, dense }: P
           </div>
         )}
       </div>
+
     </div>
   );
 }

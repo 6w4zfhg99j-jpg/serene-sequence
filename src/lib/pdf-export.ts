@@ -4,6 +4,7 @@ import {
   VONA_SANS_TTF_BASE64,
   VONA_SERIF_ITALIC_TTF_BASE64,
 } from "@/lib/pdf-fonts";
+import { parseBold, segmentsFor } from "@/lib/rich-text";
 
 /** Font names used everywhere in the export (Unicode: Latin + Cyrillic). */
 const SANS = "VonaSans";
@@ -310,21 +311,34 @@ export async function exportSequenceGridPdf(
       measure.splitTextToSize(it.pose.name, cardW - 1) as string[]
     ).slice(0, maxNameLines);
     measure.setFontSize(noteSize);
+    // Notes carry markdown-style **bold** markers; strip them for layout and
+    // keep the ranges so emphasis can be re-applied when drawing.
+    const note = it.notes ? parseBold(it.notes) : { plain: "", ranges: [] };
     const noteLines =
-      withNotes && it.notes
-        ? (measure.splitTextToSize(it.notes, cardW - 1) as string[]).slice(
+      withNotes && note.plain
+        ? (measure.splitTextToSize(note.plain, cardW - 1) as string[]).slice(
             0,
             maxNoteLines
           )
         : [];
+    // Character offset of each wrapped line inside the plain text.
+    const noteOffsets: number[] = [];
+    let cursor = 0;
+    for (const ln of noteLines) {
+      const at = note.plain.indexOf(ln, cursor);
+      const start = at === -1 ? cursor : at;
+      noteOffsets.push(start);
+      cursor = start + ln.length;
+    }
     const height =
       labelTop +
       nameLines.length * nameLead +
       (it.side ? sideLead : 0) +
       noteLines.length * noteLead +
       labelBottom;
-    return { nameLines, noteLines, height };
+    return { nameLines, noteLines, noteOffsets, noteRanges: note.ranges, height };
   });
+
   const maxLabelH = cardText.length
     ? Math.max(...cardText.map((c) => c.height))
     : (hasNotes ? 10 : 7) * scale;
@@ -334,7 +348,10 @@ export async function exportSequenceGridPdf(
   measure.setFont(SANS, "normal");
   measure.setFontSize(8.5);
   const notesLines = seq.practice_notes
-    ? (measure.splitTextToSize(seq.practice_notes, notesW) as string[])
+    ? (measure.splitTextToSize(
+        parseBold(seq.practice_notes).plain,
+        notesW
+      ) as string[])
     : [];
   const notesBlockH = notesLines.length ? 4.5 + notesLines.length * 4 : 0;
 
@@ -513,14 +530,34 @@ export async function exportSequenceGridPdf(
       ty += sideLead;
     }
 
-    // Pose note — small, light grey, directly under the name
+    // Pose note — small and light grey; **bold** spans render in full ink so
+    // section titles and key cues still stand out without a bold font file.
     if (text.noteLines.length) {
       doc.setFontSize(noteSize);
-      doc.setTextColor(150, 146, 138);
+      const plainLine = (li: number) => text.noteLines[li];
       text.noteLines.forEach((ln, li) => {
-        doc.text(ln, x + cardW / 2, ty + li * noteLead, { align: "center" });
+        const start = text.noteOffsets[li] ?? 0;
+        const segs = text.noteRanges.length
+          ? segmentsFor(
+              plainLine(li),
+              text.noteRanges.map((r) => ({
+                start: r.start - start,
+                end: r.end - start,
+              })),
+            )
+          : [{ text: ln, bold: false }];
+        const widths = segs.map((s) => doc.getTextWidth(s.text));
+        let sx = x + cardW / 2 - widths.reduce((a, b) => a + b, 0) / 2;
+        segs.forEach((s, si) => {
+          if (s.bold) doc.setTextColor(ink);
+          else doc.setTextColor(150, 146, 138);
+          doc.text(s.text, sx, ty + li * noteLead);
+          sx += widths[si];
+        });
       });
+      doc.setTextColor(150, 146, 138);
     }
+
 
     col += 1;
     if (col === cols) {
