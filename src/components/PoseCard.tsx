@@ -3,6 +3,7 @@ import type { Pose } from "@/lib/yoga-api";
 import { PoseImage } from "./PoseImage";
 import { useT } from "@/lib/i18n";
 import { useCategoryLabel } from "@/lib/i18n/categories";
+import { RichText } from "@/lib/rich-text";
 
 interface Props {
   pose: Pose;
