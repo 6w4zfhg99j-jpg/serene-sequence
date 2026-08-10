@@ -348,7 +348,10 @@ export async function exportSequenceGridPdf(
   measure.setFont(SANS, "normal");
   measure.setFontSize(8.5);
   const notesLines = seq.practice_notes
-    ? (measure.splitTextToSize(seq.practice_notes, notesW) as string[])
+    ? (measure.splitTextToSize(
+        parseBold(seq.practice_notes).plain,
+        notesW
+      ) as string[])
     : [];
   const notesBlockH = notesLines.length ? 4.5 + notesLines.length * 4 : 0;
 
