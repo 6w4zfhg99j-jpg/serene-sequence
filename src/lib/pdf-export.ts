@@ -4,6 +4,7 @@ import {
   VONA_SANS_TTF_BASE64,
   VONA_SERIF_ITALIC_TTF_BASE64,
 } from "@/lib/pdf-fonts";
+import { parseBold, segmentsFor } from "@/lib/rich-text";
 
 /** Font names used everywhere in the export (Unicode: Latin + Cyrillic). */
 const SANS = "VonaSans";
