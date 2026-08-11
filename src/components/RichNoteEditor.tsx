@@ -1,6 +1,6 @@
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { Bold } from "lucide-react";
-import { Textarea } from "@/components/ui/textarea";
+import { parseBold, segmentsFor } from "@/lib/rich-text";
 
 interface Props {
   value: string;
@@ -9,30 +9,92 @@ interface Props {
   placeholder?: string;
 }
 
+function escapeHtml(s: string) {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+/** Markdown-ish `**bold**` string -> HTML for the contenteditable surface. */
+function toHtml(raw: string): string {
+  const { plain, ranges } = parseBold(raw ?? "");
+  const segments = segmentsFor(plain, ranges);
+  const html = segments
+    .map((s) => {
+      const text = escapeHtml(s.text).replace(/\n/g, "<br>");
+      return s.bold ? `<strong>${text}</strong>` : text;
+    })
+    .join("");
+  return html;
+}
+
+/** HTML from the contenteditable surface -> `**bold**` storage string. */
+function fromHtml(root: HTMLElement): string {
+  let out = "";
+
+  const walk = (node: Node, bold: boolean) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = (node.textContent ?? "").replace(/\u00a0/g, " ");
+      if (!text) return;
+      out += bold ? `**${text}**` : text;
+      return;
+    }
+    if (node.nodeType !== Node.ELEMENT_NODE) return;
+    const el = node as HTMLElement;
+    const tag = el.tagName.toLowerCase();
+    if (tag === "br") {
+      out += "\n";
+      return;
+    }
+    const blocky = tag === "div" || tag === "p";
+    if (blocky && out.length > 0 && !out.endsWith("\n")) out += "\n";
+    const weight = el.style?.fontWeight;
+    const isBold =
+      bold ||
+      tag === "b" ||
+      tag === "strong" ||
+      weight === "bold" ||
+      (!!weight && Number(weight) >= 600);
+    el.childNodes.forEach((child) => walk(child, isBold));
+  };
+
+  root.childNodes.forEach((child) => walk(child, false));
+
+  // Merge adjacent bold runs: `**a****b**` -> `**ab**`
+  return out.replace(/\*\*\*\*/g, "").replace(/\n+$/, "");
+}
+
 /**
- * Plain-text note editor with a single formatting affordance: wrap the current
- * selection in `**` markers (also bound to Cmd/Ctrl+B).
+ * WYSIWYG note editor: bold renders as real bold text, while the value stays a
+ * plain string with `**` markers so it round-trips through the DB, the pose
+ * card and the PDF export.
  */
 export function RichNoteEditor({ value, onChange, rows = 5, placeholder }: Props) {
-  const ref = useRef<HTMLTextAreaElement>(null);
+  const ref = useRef<HTMLDivElement>(null);
+  const lastEmitted = useRef<string>("");
 
-  function toggleBold() {
+  // Sync external value in (initial load, reset) without clobbering typing.
+  useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const start = el.selectionStart;
-    const end = el.selectionEnd;
-    if (start === end) return;
-    const selected = value.slice(start, end);
-    const already = selected.startsWith("**") && selected.endsWith("**") && selected.length > 4;
-    const next = already
-      ? value.slice(0, start) + selected.slice(2, -2) + value.slice(end)
-      : value.slice(0, start) + "**" + selected + "**" + value.slice(end);
+    if (value === lastEmitted.current) return;
+    el.innerHTML = toHtml(value ?? "");
+    lastEmitted.current = value ?? "";
+  }, [value]);
+
+  function emit() {
+    const el = ref.current;
+    if (!el) return;
+    const next = fromHtml(el);
+    lastEmitted.current = next;
     onChange(next);
-    const delta = already ? -2 : 2;
-    requestAnimationFrame(() => {
-      el.focus();
-      el.setSelectionRange(start + Math.max(delta, 0), end + delta);
-    });
+  }
+
+  function toggleBold() {
+    ref.current?.focus();
+    document.execCommand("bold");
+    emit();
   }
 
   return (
@@ -49,22 +111,31 @@ export function RichNoteEditor({ value, onChange, rows = 5, placeholder }: Props
           <Bold className="size-3.5" />
         </button>
         <span className="ml-1 text-[11px] text-ink-subtle">
-          Select text and press B to make it bold
+          Select text and press ⌘B to make it bold
         </span>
       </div>
-      <Textarea
+      <div
         ref={ref}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
+        contentEditable
+        suppressContentEditableWarning
+        role="textbox"
+        aria-multiline="true"
+        data-placeholder={placeholder}
+        onInput={emit}
+        onBlur={emit}
         onKeyDown={(e) => {
           if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "b") {
             e.preventDefault();
             toggleBold();
           }
         }}
-        rows={rows}
-        placeholder={placeholder}
-        className="resize-y border-0 bg-transparent focus-visible:ring-0"
+        onPaste={(e) => {
+          e.preventDefault();
+          const text = e.clipboardData.getData("text/plain");
+          document.execCommand("insertText", false, text);
+        }}
+        className="w-full overflow-y-auto whitespace-pre-wrap break-words px-3 py-2 text-sm outline-none empty:before:text-ink-subtle empty:before:content-[attr(data-placeholder)]"
+        style={{ minHeight: `${rows * 1.5 + 1}rem` }}
       />
     </div>
   );
