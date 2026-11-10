@@ -8,3 +8,4 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+- Sequences carry a practice_type (yoga|stretching, default yoga) in both Cloud and the Electron SQLite DB; poses stay shared across types — why: one unified library, no duplicated poses.

@@ -5,6 +5,8 @@ export const uk: Dict = {
   "nav.createSequence": "Створити послідовність",
   "nav.poseLibrary": "Бібліотека асан",
   "nav.savedSequences": "Збережені",
+  "practice.yoga": "Йога",
+  "practice.stretching": "Стретчинг",
   "nav.settings": "Налаштування",
 
   "common.loading": "Завантаження...",

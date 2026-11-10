@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+import { PracticeToggle } from "@/components/PracticeToggle";
+import type { PracticeType } from "@/lib/yoga-api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
@@ -86,10 +88,15 @@ function Home() {
   const t = useT();
   const qc = useQueryClient();
   const nav = useNavigate();
-  const { data: sequences = [], isLoading } = useQuery({
+  const { data: allSequences = [], isLoading } = useQuery({
     queryKey: ["sequences"],
     queryFn: fetchSequences,
   });
+  const [practice, setPractice] = useState<PracticeType>("yoga");
+  const sequences = useMemo(
+    () => allSequences.filter((s) => (s.practice_type ?? "yoga") === practice),
+    [allSequences, practice],
+  );
   const { data: folders = [] } = useQuery({
     queryKey: ["folders"],
     queryFn: fetchFolders,
@@ -118,6 +125,7 @@ function Home() {
       createSequence({
         title: newTitle.trim() || t("home.untitled"),
         folder_id: newFolderId,
+        practice_type: practice,
       }),
     onSuccess: (id) => {
       refreshAll();
@@ -205,6 +213,7 @@ function Home() {
     <div className="mx-auto max-w-7xl px-6 py-10">
       <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
+          <PracticeToggle value={practice} onChange={setPractice} className="mb-4" />
           <p className="label-eyebrow">{t("home.eyebrow")}</p>
           <h1 className="mt-1 font-serif text-5xl">{heading}</h1>
           <p className="mt-2 max-w-lg text-sm text-ink-muted">

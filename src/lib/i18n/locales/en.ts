@@ -8,6 +8,8 @@ export const en = {
   "nav.createSequence": "Create Sequence",
   "nav.poseLibrary": "Pose Library",
   "nav.savedSequences": "Saved Sequences",
+  "practice.yoga": "Yoga",
+  "practice.stretching": "Stretching",
   "nav.settings": "Settings",
 
   // Common

@@ -149,6 +149,9 @@ function init(dbPath) {
   if (!seqCols.includes("deleted_at")) {
     db.exec("ALTER TABLE sequences ADD COLUMN deleted_at TEXT");
   }
+  if (!seqCols.includes("practice_type")) {
+    db.exec("ALTER TABLE sequences ADD COLUMN practice_type TEXT NOT NULL DEFAULT 'yoga'");
+  }
   db.exec("CREATE INDEX IF NOT EXISTS idx_sequences_folder ON sequences(folder_id)");
   db.exec("CREATE INDEX IF NOT EXISTS idx_folders_parent ON folders(parent_id)");
   purgeExpiredTrash();
@@ -625,6 +628,7 @@ function mapSequenceRow(s, items) {
     title: s.title,
     description: s.description,
     level: s.level,
+    practice_type: s.practice_type ?? "yoga",
     created_at: s.created_at,
     updated_at: s.updated_at,
     deleted_at: s.deleted_at ?? null,
@@ -681,6 +685,7 @@ function getSequence(id) {
     description: s.description,
     practice_notes: s.practice_notes ?? null,
     level: s.level,
+    practice_type: s.practice_type ?? "yoga",
     created_at: s.created_at,
     updated_at: s.updated_at,
     folder_id: s.folder_id ?? null,
@@ -701,8 +706,8 @@ function getSequence(id) {
 function createSequence(input) {
   const id = randomUUID();
   db.prepare(
-    `INSERT INTO sequences (id, title, description, practice_notes, level, folder_id, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO sequences (id, title, description, practice_notes, level, folder_id, practice_type, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     id,
     input.title,
@@ -710,6 +715,7 @@ function createSequence(input) {
     input.practice_notes ?? null,
     input.level ?? "all-levels",
     input.folder_id ?? null,
+    input.practice_type === "stretching" ? "stretching" : "yoga",
     now(),
     now(),
   );
@@ -719,7 +725,7 @@ function createSequence(input) {
 function updateSequence(id, patch) {
   const fields = [];
   const values = [];
-  for (const k of ["title", "description", "practice_notes", "level", "folder_id"]) {
+  for (const k of ["title", "description", "practice_notes", "level", "folder_id", "practice_type"]) {
     if (k in patch) {
       fields.push(`${k} = ?`);
       values.push(patch[k]);
@@ -768,6 +774,7 @@ function duplicateSequence(id) {
     practice_notes: src.practice_notes ?? null,
     level: src.level,
     folder_id: src.folder_id ?? null,
+    practice_type: src.practice_type ?? "yoga",
   });
   if (src.tags.length) setSequenceTags(newId, src.tags.map((t) => t.id));
   const ins = db.prepare(

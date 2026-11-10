@@ -6,6 +6,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
+import type { ErrorComponentProps } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
@@ -34,7 +35,7 @@ function NotFoundComponent() {
   );
 }
 
-function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+function ErrorComponent({ error, reset }: ErrorComponentProps) {
   const router = useRouter();
   useEffect(() => {
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
@@ -43,7 +44,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
     <div className="flex min-h-screen items-center justify-center px-6">
       <div className="max-w-md text-center">
         <h1 className="font-serif text-3xl">Something went sideways.</h1>
-        <p className="mt-3 text-sm text-ink-muted">{error.message}</p>
+        <p className="mt-3 text-sm text-ink-muted">{(error as Error).message}</p>
         <button
           onClick={() => {
             router.invalidate();

@@ -5,6 +5,8 @@ export const it: Dict = {
   "nav.createSequence": "Crea Sequenza",
   "nav.poseLibrary": "Libreria Posizioni",
   "nav.savedSequences": "Sequenze Salvate",
+  "practice.yoga": "Yoga",
+  "practice.stretching": "Stretching",
   "nav.settings": "Impostazioni",
 
   "common.loading": "Caricamento...",

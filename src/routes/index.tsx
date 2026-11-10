@@ -1,7 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { createSequence } from "@/lib/yoga-api";
+import { createSequence, type PracticeType } from "@/lib/yoga-api";
+import { PracticeToggle } from "@/components/PracticeToggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useT } from "@/lib/i18n";
@@ -32,8 +33,9 @@ function BuilderStart() {
   const nav = useNavigate();
   const t = useT();
   const [title, setTitle] = useState("");
+  const [practice, setPractice] = useState<PracticeType>("yoga");
   const create = useMutation({
-    mutationFn: () => createSequence({ title: title.trim() || t("home.untitled") }),
+    mutationFn: () => createSequence({ title: title.trim() || t("home.untitled"), practice_type: practice }),
     onSuccess: (id) => {
       qc.invalidateQueries({ queryKey: ["sequences"] });
       nav({ to: "/sequences/$id", params: { id } });
@@ -45,7 +47,8 @@ function BuilderStart() {
       <p className="label-eyebrow">{t("builder.eyebrow")}</p>
       <h1 className="mt-2 font-serif text-4xl">{t("builder.nameHeading")}</h1>
       <p className="mt-2 text-sm text-ink-muted">{t("builder.nameHint")}</p>
-      <div className="mt-6 flex w-full flex-col gap-3">
+      <PracticeToggle value={practice} onChange={setPractice} className="mt-6" />
+      <div className="mt-4 flex w-full flex-col gap-3">
         <Input
           autoFocus
           value={title}

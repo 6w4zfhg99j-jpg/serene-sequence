@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { localBridge } from "./local-bridge";
 
 export type Difficulty = "beginner" | "intermediate" | "advanced";
+export type PracticeType = "yoga" | "stretching";
 export type Level = "all-levels" | "beginner" | "intermediate" | "advanced";
 
 export interface Category {
@@ -66,6 +67,7 @@ export interface Sequence {
   description: string | null;
   practice_notes: string | null;
   level: Level;
+  practice_type: PracticeType;
   created_at: string;
   updated_at: string;
   folder_id: string | null;
@@ -77,6 +79,7 @@ export interface SequenceListItem {
   title: string;
   description: string | null;
   level: Level;
+  practice_type: PracticeType;
   created_at: string;
   updated_at: string;
   deleted_at?: string | null;
@@ -563,7 +566,7 @@ export async function fetchSequences(): Promise<SequenceListItem[]> {
   const { data, error } = await supabase
     .from("sequences")
     .select(
-      `id, title, description, level, created_at, updated_at, folder_id,
+      `id, title, description, level, practice_type, created_at, updated_at, folder_id,
        tags:sequence_tags(tag:tags(id,name)),
        items:sequence_poses(duration_seconds, pose:poses(duration_seconds))`,
     )
@@ -575,6 +578,7 @@ export async function fetchSequences(): Promise<SequenceListItem[]> {
     title: r.title,
     description: r.description,
     level: r.level,
+    practice_type: r.practice_type ?? "yoga",
     created_at: r.created_at,
     updated_at: r.updated_at,
     folder_id: r.folder_id ?? null,
@@ -616,6 +620,7 @@ export async function createSequence(input: {
   practice_notes?: string | null;
   level?: Level;
   folder_id?: string | null;
+  practice_type?: PracticeType;
 }): Promise<string> {
   const local = localBridge();
   if (local) return local.sequences.create(input);
@@ -627,6 +632,7 @@ export async function createSequence(input: {
       practice_notes: input.practice_notes ?? null,
       level: input.level ?? "all-levels",
       folder_id: input.folder_id ?? null,
+      practice_type: input.practice_type ?? "yoga",
     })
     .select("id")
     .single();
@@ -642,6 +648,7 @@ export async function updateSequence(
     practice_notes?: string | null;
     level?: Level;
     folder_id?: string | null;
+    practice_type?: PracticeType;
   },
 ) {
   const local = localBridge();
@@ -693,7 +700,7 @@ export async function fetchTrashedSequences(): Promise<SequenceListItem[]> {
   const { data, error } = await supabase
     .from("sequences")
     .select(
-      `id, title, description, level, created_at, updated_at, deleted_at, folder_id,
+      `id, title, description, level, practice_type, created_at, updated_at, deleted_at, folder_id,
        tags:sequence_tags(tag:tags(id,name)),
        items:sequence_poses(id)`,
     )
@@ -705,6 +712,7 @@ export async function fetchTrashedSequences(): Promise<SequenceListItem[]> {
     title: r.title,
     description: r.description,
     level: r.level,
+    practice_type: r.practice_type ?? "yoga",
     created_at: r.created_at,
     updated_at: r.updated_at,
     deleted_at: r.deleted_at,
@@ -755,6 +763,7 @@ export async function duplicateSequence(id: string): Promise<string> {
     practice_notes: src.practice_notes ?? null,
     level: src.level,
     folder_id: src.folder_id ?? null,
+    practice_type: src.practice_type ?? "yoga",
   });
   if (src.tags.length) await setSequenceTags(newId, src.tags.map((t) => t.id));
   if (src.items.length) {

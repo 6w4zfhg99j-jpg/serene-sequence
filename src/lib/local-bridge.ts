@@ -78,6 +78,7 @@ export interface LocalBridge {
       practice_notes?: string | null;
       level?: Level;
       folder_id?: string | null;
+      practice_type?: "yoga" | "stretching";
     }): Promise<string>;
     update(
       id: string,
@@ -87,6 +88,7 @@ export interface LocalBridge {
         practice_notes?: string | null;
         level?: Level;
         folder_id?: string | null;
+        practice_type?: "yoga" | "stretching";
       },
     ): Promise<void>;
     setTags(id: string, tagIds: string[]): Promise<void>;

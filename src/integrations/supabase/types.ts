@@ -300,6 +300,7 @@ export type Database = {
           id: string
           level: string
           practice_notes: string | null
+          practice_type: string
           title: string
           updated_at: string
         }
@@ -311,6 +312,7 @@ export type Database = {
           id?: string
           level?: string
           practice_notes?: string | null
+          practice_type?: string
           title: string
           updated_at?: string
         }
@@ -322,6 +324,7 @@ export type Database = {
           id?: string
           level?: string
           practice_notes?: string | null
+          practice_type?: string
           title?: string
           updated_at?: string
         }
