@@ -90,6 +90,9 @@ function listSequences(state: BrowserSnapshot, trash = false): SequenceListItem[
 }
 async function read<T>(run: (state: BrowserSnapshot) => T): Promise<T> {
   await initializeBrowserWorkspace();
+  await store.change((s) => {
+    s.sequences = s.sequences.filter((q) => !trashed(q) || Date.now() - Date.parse(trashed(q) ?? "") < 7 * 86400000);
+  });
   const state = await store.read();
   if (!state) throw new Error("Local workspace is not ready");
   return run(state);
@@ -135,7 +138,12 @@ export const browserLocalBridge: LocalBridge = {
       s.categories.push(category); return category;
     }),
     update: (id, name) => change((s) => { const c = s.categories.find((c) => c.id === id); if (c) c.name = name.trim(); }),
-    remove: (id) => change((s) => { s.categories = s.categories.filter((c) => c.id !== id); s.subcategories = s.subcategories.filter((c) => c.category_id !== id); }),
+    remove: (id) => change((s) => {
+      const subIds = new Set(s.subcategories.filter((c) => c.category_id === id).map((c) => c.id));
+      s.categories = s.categories.filter((c) => c.id !== id);
+      s.subcategories = s.subcategories.filter((c) => c.category_id !== id);
+      s.poses.forEach((p) => { p.categories = p.categories.filter((c) => c.id !== id); p.subcategory_ids = p.subcategory_ids.filter((sid) => !subIds.has(sid)); if (p.subcategory_id && subIds.has(p.subcategory_id)) p.subcategory_id = p.subcategory_ids[0] ?? null; });
+    }),
     reorder: (ids) => change((s) => { ids.forEach((id, i) => { const c = s.categories.find((c) => c.id === id); if (c) c.sort_order = i; }); }),
   },
   subcategories: {
@@ -147,13 +155,18 @@ export const browserLocalBridge: LocalBridge = {
       s.subcategories.push(sub); return sub;
     }),
     update: (id, name) => change((s) => { const c = s.subcategories.find((c) => c.id === id); if (c) c.name = name.trim(); }),
-    remove: (id) => change((s) => { s.subcategories = s.subcategories.filter((c) => c.id !== id); }),
+    remove: (id) => change((s) => { s.subcategories = s.subcategories.filter((c) => c.id !== id); s.poses.forEach((p) => { p.subcategory_ids = p.subcategory_ids.filter((sid) => sid !== id); if (p.subcategory_id === id) p.subcategory_id = p.subcategory_ids[0] ?? null; }); }),
     reorder: (ids) => change((s) => { ids.forEach((id, i) => { const c = s.subcategories.find((c) => c.id === id); if (c) c.sort_order = i; }); }),
   },
   tags: {
     list: () => read((s) => s.tags),
     create: (raw) => change((s) => { const name = raw.trim().replace(/^#/, "").toLowerCase(); const existing = s.tags.find((t) => t.name === name); if (existing) return existing; const t = { id: crypto.randomUUID(), name }; s.tags.push(t); return t; }),
-    update: (id, name) => change((s) => { const t = s.tags.find((t) => t.id === id); if (t) t.name = name.trim().replace(/^#/, "").toLowerCase(); }),
+    update: async (id, rawName) => {
+      const name = rawName.trim().replace(/^#/, "").toLowerCase();
+      const target = await read((s) => s.tags.find((t) => t.id !== id && t.name === name));
+      if (target) return browserLocalBridge.tags.merge(id, target.id);
+      return change((s) => { const t = s.tags.find((t) => t.id === id); if (t) { t.name = name; [...s.poses, ...s.sequences].forEach((p) => { p.tags = p.tags.map((tag) => tag.id === id ? { ...t } : tag); }); } });
+    },
     merge: (source, target) => change((s) => { const tag = s.tags.find((t) => t.id === target); if (!tag) return; [...s.poses, ...s.sequences].forEach((p) => { if (p.tags.some((t) => t.id === source)) p.tags = [...p.tags.filter((t) => t.id !== source && t.id !== target), tag]; }); s.tags = s.tags.filter((t) => t.id !== source); }),
     remove: (id) => change((s) => { s.tags = s.tags.filter((t) => t.id !== id); [...s.poses, ...s.sequences].forEach((p) => { p.tags = p.tags.filter((t) => t.id !== id); }); }),
   },

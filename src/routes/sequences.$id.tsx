@@ -102,11 +102,20 @@ function SequenceEditor() {
   const { id } = Route.useParams();
   const qc = useQueryClient();
   const nav = useNavigate();
+  const [draftTitle, setDraftTitle] = useState("");
+  const [draftDescription, setDraftDescription] = useState("");
+  const [draftNotes, setDraftNotes] = useState("");
 
   const { data: seq, isLoading, error } = useQuery({
     queryKey: ["sequence", id],
     queryFn: () => fetchSequence(id),
   });
+  useEffect(() => {
+    if (!seq) return;
+    setDraftTitle(seq.title);
+    setDraftDescription(seq.description ?? "");
+    setDraftNotes(seq.practice_notes ?? "");
+  }, [seq?.id]);
   const { data: allPoses = [] } = useQuery({ queryKey: ["poses"], queryFn: fetchPoses });
   const { data: allCategories = [] } = useQuery({ queryKey: ["categories"], queryFn: fetchCategories });
   const { data: allSubcategories = [] } = useQuery({ queryKey: ["subcategories"], queryFn: fetchSubcategories });
@@ -259,18 +268,14 @@ function SequenceEditor() {
           </Button>
           <Input
             aria-label={t("builder.nameHeading")}
-            value={seq.title}
-            onChange={(e) =>
-              qc.setQueryData(["sequence", id], { ...seq, title: e.target.value })
-            }
+            value={draftTitle}
+            onChange={(e) => setDraftTitle(e.target.value)}
             onBlur={(e) => patch.mutate({ title: e.target.value })}
             className="mt-2 border-none bg-transparent px-0 font-serif !text-4xl shadow-none focus-visible:ring-0"
           />
           <Textarea
-            value={seq.description ?? ""}
-            onChange={(e) =>
-              qc.setQueryData(["sequence", id], { ...seq, description: e.target.value })
-            }
+            value={draftDescription}
+            onChange={(e) => setDraftDescription(e.target.value)}
             onBlur={(e) => patch.mutate({ description: e.target.value || null })}
             placeholder={t("sequence.descriptionPlaceholder")}
             rows={2}
@@ -279,13 +284,8 @@ function SequenceEditor() {
           <div className="mt-3 max-w-2xl rounded-lg border border-line bg-surface/50 p-3">
             <div className="label-eyebrow mb-1">{t("sequence.practiceNotes")}</div>
             <Textarea
-              value={seq.practice_notes ?? ""}
-              onChange={(e) =>
-                qc.setQueryData(["sequence", id], {
-                  ...seq,
-                  practice_notes: e.target.value,
-                })
-              }
+              value={draftNotes}
+              onChange={(e) => setDraftNotes(e.target.value)}
               onBlur={(e) => patch.mutate({ practice_notes: e.target.value || null })}
               placeholder={t("sequence.practiceNotesPlaceholder")}
               rows={3}
@@ -295,7 +295,7 @@ function SequenceEditor() {
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs text-ink-muted">{t(seq.practice_type === "stretching" ? "practice.stretching" : "practice.yoga")}</span>
-          <Button variant="outline" disabled={patch.isPending || addPose.isPending || patchItem.isPending} onClick={() => patch.mutate({ title: seq.title, description: seq.description, practice_notes: seq.practice_notes }, { onSuccess: () => toast.success(t("sequence.saved")) })}><Save className="size-4" />{t("common.save")}</Button>
+          <Button variant="outline" onMouseDown={(e) => e.preventDefault()} disabled={patch.isPending || addPose.isPending || patchItem.isPending} onClick={() => patch.mutate({ title: draftTitle, description: draftDescription || null, practice_notes: draftNotes || null }, { onSuccess: () => toast.success(t("sequence.saved")) })}><Save className="size-4" />{t("common.save")}</Button>
           <Button variant="outline" onClick={() => setShowExport(true)}>
             <FileDown className="mr-1 size-4" /> Export PDF
           </Button>

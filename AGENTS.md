@@ -12,3 +12,5 @@
 - Browser operations use an IndexedDB-backed LocalBridge and copy existing read-only Cloud data once; Electron keeps SQLite — why: account-free local writes must not weaken Cloud permissions.
 - Categories own practice_type; initialize separate Stretching categories and subcategory links once, referencing shared poses — why: independent organization without copying pose data or replacing Yoga assignments.
 - Share practice selection above routes and synchronize it when editing a sequence — why: gallery, builder and saved lists must retain the same mode across navigation.
+- Local queries and mutations use networkMode always — why: IndexedDB and SQLite operations must run when the browser reports offline.
+- Editor header fields use local drafts until saved, rather than mutable query-cache drafts — why: pose-note refetches must not overwrite unsaved title or practice notes.

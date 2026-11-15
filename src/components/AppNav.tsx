@@ -14,12 +14,12 @@ export function AppNav() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-background/85 backdrop-blur-md">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-6 py-4">
         <Link to="/" className="flex items-baseline gap-2">
           <span className="font-serif text-2xl italic leading-none">VONA</span>
           <span className="label-eyebrow hidden sm:inline">{t("nav.tagline")}</span>
         </Link>
-        <nav className="flex items-center gap-1">
+        <nav className="flex w-full flex-wrap items-center gap-1 sm:w-auto">
           {NAV.map((item) => {
             const active =
               item.to === "/"
