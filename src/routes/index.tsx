@@ -1,7 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { createSequence, type PracticeType } from "@/lib/yoga-api";
+import { createSequence } from "@/lib/yoga-api";
+import { usePractice } from "@/lib/practice-context";
+import { Loader2 } from "lucide-react";
 import { PracticeToggle } from "@/components/PracticeToggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,7 +35,7 @@ function BuilderStart() {
   const nav = useNavigate();
   const t = useT();
   const [title, setTitle] = useState("");
-  const [practice, setPractice] = useState<PracticeType>("yoga");
+  const { practice, setPractice } = usePractice();
   const create = useMutation({
     mutationFn: () => createSequence({ title: title.trim() || t("home.untitled"), practice_type: practice }),
     onSuccess: (id) => {
@@ -48,19 +50,21 @@ function BuilderStart() {
       <h1 className="mt-2 font-serif text-4xl">{t("builder.nameHeading")}</h1>
       <p className="mt-2 text-sm text-ink-muted">{t("builder.nameHint")}</p>
       <PracticeToggle value={practice} onChange={setPractice} className="mt-6" />
-      <div className="mt-4 flex w-full flex-col gap-3">
+      <form className="mt-4 flex w-full flex-col gap-3" onSubmit={(e) => { e.preventDefault(); if (!create.isPending) create.mutate(); }}>
         <Input
           autoFocus
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder={t("home.titlePlaceholder")}
           className="text-center"
-          onKeyDown={(e) => e.key === "Enter" && create.mutate()}
+          aria-label={t("builder.nameHeading")}
         />
-        <Button size="lg" onClick={() => create.mutate()} disabled={create.isPending}>
+        <Button type="submit" size="lg" disabled={create.isPending}>
+          {create.isPending && <Loader2 className="size-4 animate-spin" />}
           {t("builder.start")}
         </Button>
-      </div>
+        {create.isError && <p role="alert" className="text-sm text-destructive">{t("sequence.saveFailed")}</p>}
+      </form>
     </div>
   );
 }

@@ -158,6 +158,10 @@ function init(dbPath) {
 
 
   db.exec("CREATE TABLE IF NOT EXISTS app_meta (key TEXT PRIMARY KEY, value TEXT)");
+  const categoryCols = db.prepare("PRAGMA table_info(categories)").all().map((c) => c.name);
+  if (!categoryCols.includes("practice_type")) {
+    db.exec("ALTER TABLE categories ADD COLUMN practice_type TEXT NOT NULL DEFAULT 'yoga'");
+  }
   const metaGet = db.prepare("SELECT value FROM app_meta WHERE key = ?");
   const metaSet = db.prepare("INSERT OR REPLACE INTO app_meta (key, value) VALUES (?, ?)");
 
@@ -187,6 +191,24 @@ function init(dbPath) {
       if (!exists.get(name)) insCat.run(randomUUID(), name, i);
     });
     metaSet.run("default_categories", "v2");
+  }
+  // Separate category/subcategory organization, never duplicate pose rows.
+  if (!metaGet.get("stretching_categories_v1")) {
+    db.transaction(() => {
+      const yogaCategories = db.prepare("SELECT * FROM categories WHERE practice_type = 'yoga'").all();
+      for (const c of yogaCategories) {
+        const id = randomUUID();
+        db.prepare("INSERT INTO categories (id, name, sort_order, practice_type) VALUES (?, ?, ?, 'stretching')").run(id, c.name, c.sort_order);
+        db.prepare("INSERT OR IGNORE INTO pose_categories (pose_id, category_id) SELECT pose_id, ? FROM pose_categories WHERE category_id = ?").run(id, c.id);
+        const subs = db.prepare("SELECT * FROM subcategories WHERE category_id = ?").all(c.id);
+        for (const sub of subs) {
+          const subId = randomUUID();
+          db.prepare("INSERT INTO subcategories (id, category_id, name, sort_order) VALUES (?, ?, ?, ?)").run(subId, id, sub.name, sub.sort_order);
+          db.prepare("INSERT OR IGNORE INTO pose_subcategories (pose_id, subcategory_id) SELECT pose_id, ? FROM pose_subcategories WHERE subcategory_id = ?").run(subId, sub.id);
+        }
+      }
+      metaSet.run("stretching_categories_v1", "1");
+    })();
   }
 }
 
@@ -220,7 +242,7 @@ function hydratePoseCategoriesTags(poses) {
   const placeholders = ids.map(() => "?").join(",");
   const cats = db
     .prepare(
-      `SELECT pc.pose_id, c.id, c.name, c.sort_order
+      `SELECT pc.pose_id, c.id, c.name, c.sort_order, c.practice_type
        FROM pose_categories pc JOIN categories c ON c.id = pc.category_id
        WHERE pc.pose_id IN (${placeholders})`,
     )
@@ -238,6 +260,7 @@ function hydratePoseCategoriesTags(poses) {
       id: r.id,
       name: r.name,
       sort_order: r.sort_order,
+      practice_type: r.practice_type,
     });
   }
   const subs = db
@@ -266,21 +289,22 @@ function listCategories() {
     .all();
 }
 
-function createCategory(rawName) {
+function createCategory(rawName, practice = "yoga") {
   const name = String(rawName ?? "").trim();
   if (!name) throw new Error("Empty category name");
   const existing = db
-    .prepare("SELECT * FROM categories WHERE lower(name) = lower(?)")
-    .get(name);
+    .prepare("SELECT * FROM categories WHERE lower(name) = lower(?) AND practice_type = ?")
+    .get(name, practice);
   if (existing) return existing;
   const max = db.prepare("SELECT COALESCE(MAX(sort_order), -1) AS m FROM categories").get().m;
   const id = randomUUID();
-  db.prepare("INSERT INTO categories (id, name, sort_order) VALUES (?, ?, ?)").run(
+  db.prepare("INSERT INTO categories (id, name, sort_order, practice_type) VALUES (?, ?, ?, ?)").run(
     id,
     name,
     max + 1,
+    practice,
   );
-  return { id, name, sort_order: max + 1 };
+  return { id, name, sort_order: max + 1, practice_type: practice };
 }
 
 function updateCategory(id, name) {

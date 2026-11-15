@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/select";
 import { useT } from "@/lib/i18n";
 import { useCategoryLabel } from "@/lib/i18n/categories";
+import { usePractice } from "@/lib/practice-context";
 
 const DIFFICULTIES: Difficulty[] = ["beginner", "intermediate", "advanced"];
 
@@ -45,10 +46,12 @@ interface Props {
 }
 
 export function PoseFormDialog({ open, onOpenChange, pose }: Props) {
+  const { practice } = usePractice();
   const t = useT();
   const catLabel = useCategoryLabel();
   const qc = useQueryClient();
-  const { data: categories = [] } = useQuery({ queryKey: ["categories"], queryFn: fetchCategories });
+  const { data: allCategories = [] } = useQuery({ queryKey: ["categories"], queryFn: fetchCategories });
+  const categories = allCategories.filter((c) => (c.practice_type ?? "yoga") === practice);
   const { data: subcategories = [] } = useQuery({
     queryKey: ["subcategories"],
     queryFn: fetchSubcategories,
@@ -125,7 +128,7 @@ export function PoseFormDialog({ open, onOpenChange, pose }: Props) {
   });
 
   const remove = useMutation({
-    mutationFn: () => deletePose(pose!.id),
+    mutationFn: () => { if (!pose) throw new Error(t("pose.nameRequired")); return deletePose(pose.id); },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["poses"] });
       toast.success(t("pose.deleted"));

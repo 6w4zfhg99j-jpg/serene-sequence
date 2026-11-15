@@ -1,7 +1,11 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
-import { Plus } from "lucide-react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Check, Plus } from "lucide-react";
+import { toast } from "sonner";
+import { PracticeToggle } from "@/components/PracticeToggle";
+import { usePractice } from "@/lib/practice-context";
+import { scopePracticeLibrary } from "@/lib/practice-library";
 import {
   DndContext,
   PointerSensor,
@@ -18,6 +22,9 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 
 import {
+  createSequence,
+  addPoseToSequence,
+  purgeSequence,
   fetchCategories,
   fetchPoses,
   fetchSubcategories,
@@ -35,6 +42,11 @@ import { PoseFiltersPanel, usePoseFilters } from "@/components/PoseFilters";
 import { useT } from "@/lib/i18n";
 import { useCategoryLabel } from "@/lib/i18n/categories";
 
+interface SelectionProps {
+  selectedIds: string[];
+  onSelect: (pose: Pose) => void;
+}
+
 interface Group {
   category: Category | null;
   poses: Pose[];
@@ -45,11 +57,15 @@ function SortablePoseCard({
   pose,
   onEdit,
   onFavorite,
-}: {
+  selectedIds,
+  onSelect,
+}: SelectionProps & {
   pose: Pose;
   onEdit: (p: Pose) => void;
   onFavorite: (p: Pose) => void;
 }) {
+  const t = useT();
+  const selected = selectedIds.includes(pose.id);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: pose.id });
   return (
@@ -60,7 +76,7 @@ function SortablePoseCard({
         transition,
         opacity: isDragging ? 0.4 : 1,
       }}
-      className="touch-none"
+      className="relative touch-none"
       {...attributes}
       {...listeners}
     >
@@ -70,6 +86,13 @@ function SortablePoseCard({
         onClick={() => onEdit(pose)}
         onFavorite={() => onFavorite(pose)}
       />
+      <Button size="icon" variant={selected ? "default" : "outline"} className="absolute bottom-1 right-1 size-7"
+        aria-label={`${selected ? t("common.remove") : t("common.addToSequence")} ${pose.name}`}
+        aria-pressed={selected}
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => { e.stopPropagation(); onSelect(pose); }}>
+        {selected ? <Check className="size-3" /> : <Plus className="size-3" />}
+      </Button>
     </div>
   );
 }
@@ -80,7 +103,9 @@ function CategorySection({
   onEdit,
   onFavorite,
   onReorder,
-}: {
+  selectedIds,
+  onSelect,
+}: SelectionProps & {
   group: Group;
   subcategories: Subcategory[];
   onEdit: (p: Pose) => void;
@@ -176,6 +201,8 @@ function CategorySection({
                   pose={p}
                   onEdit={onEdit}
                   onFavorite={onFavorite}
+                  selectedIds={selectedIds}
+                  onSelect={onSelect}
                 />
               ))}
             </div>
@@ -194,7 +221,9 @@ function CategoryGroupedGrid({
   onEdit,
   onFavorite,
   onReorder,
-}: {
+  selectedIds,
+  onSelect,
+}: SelectionProps & {
   poses: Pose[];
   categories: Category[];
   subcategories: Subcategory[];
@@ -227,7 +256,7 @@ function CategoryGroupedGrid({
     const result: Group[] = [];
     for (const c of sorted) {
       const arr = byId.get(c.id);
-      if (arr && arr.length) result.push({ category: c, poses: arr });
+      result.push({ category: c, poses: arr ?? [] });
     }
     if (uncategorized.length) {
       result.push({ category: null, poses: uncategorized });
@@ -245,6 +274,8 @@ function CategoryGroupedGrid({
             onEdit={onEdit}
             onFavorite={onFavorite}
             onReorder={onReorder}
+            selectedIds={selectedIds}
+            onSelect={onSelect}
           />
           {i < groups.length - 1 && (
             <div className="pt-4 text-center text-ink-subtle">─────</div>
@@ -261,26 +292,42 @@ export const Route = createFileRoute("/library")({
       { title: "Pose Library — VONA" },
       { name: "description", content: "Your personal library of yoga poses with photos, categories, tags, and notes." },
       { property: "og:title", content: "Pose Library — VONA" },
-      { property: "og:description", content: "Your personal library of yoga poses." },
+      { property: "og:description", content: "Your personal library of yoga and stretching poses." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: LibraryPage,
 });
 
 function LibraryPage() {
+  const { practice, setPractice } = usePractice();
+  const nav = useNavigate();
   const t = useT();
   const qc = useQueryClient();
-  const { data: poses = [], isLoading } = useQuery({ queryKey: ["poses"], queryFn: fetchPoses });
-  const { data: categories = [] } = useQuery({ queryKey: ["categories"], queryFn: fetchCategories });
-  const { data: subcategories = [] } = useQuery({
+  const { data: allPoses = [], isLoading, error } = useQuery({ queryKey: ["poses"], queryFn: fetchPoses });
+  const { data: allCategories = [] } = useQuery({ queryKey: ["categories"], queryFn: fetchCategories });
+  const { data: allSubcategories = [] } = useQuery({
     queryKey: ["subcategories"],
     queryFn: fetchSubcategories,
   });
   const { data: tags = [] } = useQuery({ queryKey: ["tags"], queryFn: fetchTags });
+  const { poses, categories, subcategories } = useMemo(() => scopePracticeLibrary(allPoses, allCategories, allSubcategories, practice), [allPoses, allCategories, allSubcategories, practice]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [editing, setEditing] = useState<Pose | null>(null);
   const [creating, setCreating] = useState(false);
   const { filters, setFilters, filtered } = usePoseFilters(poses);
 
+  const start = useMutation({
+    mutationFn: async () => {
+      const id = await createSequence({ title: t("home.untitled"), practice_type: practice });
+      try { for (const poseId of selectedIds) await addPoseToSequence(id, poseId); }
+      catch (error) { await purgeSequence(id); throw error; }
+      return id;
+    },
+    onSuccess: (id) => { qc.invalidateQueries({ queryKey: ["sequences"] }); nav({ to: "/sequences/$id", params: { id } }); },
+    onError: () => toast.error(t("sequence.saveFailed")),
+  });
   const fav = useMutation({
     mutationFn: (p: Pose) => toggleFavorite(p),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["poses"] }),
@@ -296,33 +343,37 @@ function LibraryPage() {
    * order, then writes the whole order back so it survives reloads.
    */
   function handleReorder(activeId: string, overId: string) {
-    const ids = poses.map((p) => p.id);
+    const ids = allPoses.map((p) => p.id);
     const from = ids.indexOf(activeId);
     const to = ids.indexOf(overId);
     if (from === -1 || to === -1) return;
     ids.splice(to, 0, ids.splice(from, 1)[0]);
-    const byId = new Map(poses.map((p) => [p.id, p]));
+    const byId = new Map(allPoses.map((p) => [p.id, p]));
     // Optimistic: reflect the new order instantly.
     qc.setQueryData<Pose[]>(
       ["poses"],
-      ids.map((id, i) => ({ ...byId.get(id)!, sort_order: i })),
+      ids.flatMap((id, i) => { const pose = byId.get(id); return pose ? [{ ...pose, sort_order: i }] : []; }),
     );
     reorder.mutate(ids);
   }
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-10">
-      <header className="mb-8 flex items-end justify-between gap-4">
+      <PracticeToggle value={practice} onChange={(p) => { setPractice(p); setSelectedIds([]); setFilters({ ...filters, categoryId: null }); }} className="mb-4" />
+      <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="label-eyebrow">{t("library.eyebrow")}</p>
           <h1 className="mt-1 font-serif text-4xl">
             {poses.length} {poses.length === 1 ? t("common.pose") : t("common.poses")}
           </h1>
         </div>
+        <div className="flex flex-wrap gap-2">
+        <Button variant="outline" onClick={() => start.mutate()} disabled={start.isPending}>{t("builder.start")}{selectedIds.length > 0 && <span>({selectedIds.length})</span>}</Button>
         <Button onClick={() => setCreating(true)}>
           <Plus className="mr-1 size-4" />
           {t("library.newPose")}
         </Button>
+        </div>
       </header>
 
       <div className="grid gap-8 lg:grid-cols-[240px_1fr]">
@@ -336,9 +387,9 @@ function LibraryPage() {
         </aside>
 
         <div>
-          {isLoading ? (
+          {error ? <p role="alert" className="text-sm text-destructive">{t("sequence.saveFailed")}</p> : isLoading ? (
             <p className="text-sm text-ink-muted">{t("common.loading")}</p>
-          ) : filtered.length === 0 ? (
+          ) : filtered.length === 0 && (filters.search || filters.favoritesOnly || filters.tagIds.length > 0) ? (
             <div className="rounded-xl border border-dashed border-line p-16 text-center">
               <p className="font-serif text-2xl">
                 {poses.length === 0 ? t("library.emptyTitle") : t("library.noMatchTitle")}
@@ -359,9 +410,11 @@ function LibraryPage() {
               categories={categories}
               subcategories={subcategories}
               filters={filters}
-              onEdit={(p) => setEditing(p)}
+              onEdit={(p) => setEditing(allPoses.find((original) => original.id === p.id) ?? p)}
               onFavorite={(p) => fav.mutate(p)}
               onReorder={handleReorder}
+              selectedIds={selectedIds}
+              onSelect={(p) => setSelectedIds((ids) => ids.includes(p.id) ? ids.filter((id) => id !== p.id) : [...ids, p.id])}
             />
           )}
         </div>

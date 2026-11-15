@@ -101,6 +101,8 @@ export const it: Dict = {
   "sequence.sideLeft": "Sinistro",
   "sequence.export": "Esporta PDF",
   "sequence.exportFailed": "Esportazione fallita",
+  "sequence.saveFailed": "Impossibile salvare le modifiche. Riprova.",
+  "sequence.saved": "Salvata",
   "sequence.includeNotes": "Includi le note di ogni posizione",
 
   "pose.new": "Nuova posizione",

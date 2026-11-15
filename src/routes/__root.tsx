@@ -5,6 +5,7 @@ import {
   useRouter,
   HeadContent,
   Scripts,
+  ClientOnly,
 } from "@tanstack/react-router";
 import type { ErrorComponentProps } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
@@ -14,6 +15,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AppNav } from "@/components/AppNav";
 import { Toaster } from "@/components/ui/sonner";
 import { I18nProvider } from "@/lib/i18n";
+import { PracticeProvider } from "@/lib/practice-context";
 
 function NotFoundComponent() {
   return (
@@ -114,11 +116,13 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <I18nProvider>
+        <PracticeProvider>
         <div className="min-h-screen bg-background text-foreground">
           <AppNav />
-          <Outlet />
+          <ClientOnly fallback={null}><Outlet /></ClientOnly>
           <Toaster />
         </div>
+        </PracticeProvider>
       </I18nProvider>
     </QueryClientProvider>
   );

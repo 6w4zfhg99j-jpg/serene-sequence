@@ -1,5 +1,6 @@
 import type { PracticeType } from "@/lib/yoga-api";
 import { useT } from "@/lib/i18n";
+import { Button } from "@/components/ui/button";
 
 export const PRACTICE_TYPES: PracticeType[] = ["yoga", "stretching"];
 
@@ -20,10 +21,11 @@ export function PracticeToggle({
       className={"inline-flex rounded-lg border border-line bg-surface p-1 " + className}
     >
       {PRACTICE_TYPES.map((p) => (
-        <button
+        <Button
           key={p}
           type="button"
           role="tab"
+          variant="ghost"
           aria-selected={value === p}
           onClick={() => onChange(p)}
           className={
@@ -32,7 +34,7 @@ export function PracticeToggle({
           }
         >
           {t(p === "yoga" ? "practice.yoga" : "practice.stretching")}
-        </button>
+        </Button>
       ))}
     </div>
   );

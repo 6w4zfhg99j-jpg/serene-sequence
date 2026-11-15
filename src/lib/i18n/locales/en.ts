@@ -107,6 +107,8 @@ export const en = {
   "sequence.sideLeft": "Left",
   "sequence.export": "Export PDF",
   "sequence.exportFailed": "Export failed",
+  "sequence.saveFailed": "Could not save your changes. Please try again.",
+  "sequence.saved": "Saved",
   "sequence.includeNotes": "Include per-pose notes",
 
   // Pose form

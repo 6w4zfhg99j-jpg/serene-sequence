@@ -9,6 +9,7 @@ export interface Category {
   id: string;
   name: string;
   sort_order: number;
+  practice_type?: PracticeType;
   pose_count?: number;
 }
 export interface Subcategory {
@@ -129,6 +130,7 @@ export async function fetchCategories(): Promise<Category[]> {
     id: c.id,
     name: c.name,
     sort_order: c.sort_order,
+    practice_type: c.practice_type ?? "yoga",
     pose_count: c.pose_categories?.[0]?.count ?? 0,
   }));
 }
@@ -280,11 +282,11 @@ export async function createTag(name: string): Promise<Tag> {
 
 // ---- Category management -----------------------------------------
 
-export async function createCategory(name: string): Promise<Category> {
+export async function createCategory(name: string, practice: PracticeType = "yoga"): Promise<Category> {
   const clean = name.trim();
   if (!clean) throw new Error("Empty category name");
   const local = localBridge();
-  if (local) return local.categories.create(clean);
+  if (local) return local.categories.create(clean, practice);
   const existing = await fetchCategories();
   const dupe = existing.find((c) => c.name.toLowerCase() === clean.toLowerCase());
   if (dupe) return dupe;
@@ -607,6 +609,7 @@ export async function fetchSequence(id: string): Promise<Sequence> {
   if (error) throw error;
   return {
     ...(data as any),
+    practice_type: data.practice_type === "stretching" ? "stretching" : "yoga",
     tags: ((data as any).tags ?? []).map((t: any) => t.tag).filter(Boolean),
     items: ((data as any).items ?? [])
       .map((it: any) => ({ ...it, pose: normalizePose(it.pose) }))

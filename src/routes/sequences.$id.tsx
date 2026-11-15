@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { usePractice } from "@/lib/practice-context";
+import { scopePracticeLibrary } from "@/lib/practice-library";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
@@ -27,6 +29,7 @@ import {
   Loader2,
   Plus,
   Trash2,
+  Save,
 } from "lucide-react";
 
 import {
@@ -86,29 +89,35 @@ export const Route = createFileRoute("/sequences/$id")({
       { name: "description", content: "Build and edit a yoga sequence." },
       { property: "og:title", content: "Sequence — VONA" },
       { property: "og:description", content: "Build and edit a yoga sequence." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: SequenceEditor,
 });
 
 function SequenceEditor() {
+  const { setPractice } = usePractice();
   const t = useT();
   const { id } = Route.useParams();
   const qc = useQueryClient();
   const nav = useNavigate();
 
-  const { data: seq, isLoading } = useQuery({
+  const { data: seq, isLoading, error } = useQuery({
     queryKey: ["sequence", id],
     queryFn: () => fetchSequence(id),
   });
-  const { data: poses = [] } = useQuery({ queryKey: ["poses"], queryFn: fetchPoses });
-  const { data: categories = [] } = useQuery({ queryKey: ["categories"], queryFn: fetchCategories });
-  const { data: subcategories = [] } = useQuery({ queryKey: ["subcategories"], queryFn: fetchSubcategories });
+  const { data: allPoses = [] } = useQuery({ queryKey: ["poses"], queryFn: fetchPoses });
+  const { data: allCategories = [] } = useQuery({ queryKey: ["categories"], queryFn: fetchCategories });
+  const { data: allSubcategories = [] } = useQuery({ queryKey: ["subcategories"], queryFn: fetchSubcategories });
+  const { poses, categories, subcategories } = useMemo(() => scopePracticeLibrary(allPoses, allCategories, allSubcategories, seq?.practice_type ?? "yoga"), [allPoses, allCategories, allSubcategories, seq?.practice_type]);
+  useEffect(() => { if (seq) setPractice(seq.practice_type ?? "yoga"); }, [seq?.practice_type]);
   const { data: tags = [] } = useQuery({ queryKey: ["tags"], queryFn: fetchTags });
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["sequence", id] });
 
   const patch = useMutation({
+    onError: () => toast.error(t("sequence.saveFailed")),
     mutationFn: (p: Parameters<typeof updateSequence>[1]) => updateSequence(id, p),
     onSuccess: () => {
       invalidate();
@@ -116,6 +125,7 @@ function SequenceEditor() {
     },
   });
   const addPose = useMutation({
+    onError: () => toast.error(t("sequence.saveFailed")),
     mutationFn: (poseId: string) => addPoseToSequence(id, poseId),
     onSuccess: invalidate,
   });
@@ -178,7 +188,8 @@ function SequenceEditor() {
       prevIds.current = curIds;
       return;
     }
-    const added = seq.items.filter((i) => !prevIds.current!.has(i.id));
+    const previous = prevIds.current;
+    const added = seq.items.filter((i) => !previous.has(i.id));
     prevIds.current = curIds;
     if (added.length > 0) {
       const target = added[added.length - 1];
@@ -197,6 +208,7 @@ function SequenceEditor() {
     }
   }, [seq]);
 
+  if (error) return <p role="alert" className="p-8 text-destructive">{t("sequence.saveFailed")}</p>;
   if (isLoading || !seq) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
@@ -246,6 +258,7 @@ function SequenceEditor() {
             <ArrowLeft className="mr-1 size-4" /> All sequences
           </Button>
           <Input
+            aria-label={t("builder.nameHeading")}
             value={seq.title}
             onChange={(e) =>
               qc.setQueryData(["sequence", id], { ...seq, title: e.target.value })
@@ -281,6 +294,8 @@ function SequenceEditor() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <span className="text-xs text-ink-muted">{t(seq.practice_type === "stretching" ? "practice.stretching" : "practice.yoga")}</span>
+          <Button variant="outline" disabled={patch.isPending || addPose.isPending || patchItem.isPending} onClick={() => patch.mutate({ title: seq.title, description: seq.description, practice_notes: seq.practice_notes }, { onSuccess: () => toast.success(t("sequence.saved")) })}><Save className="size-4" />{t("common.save")}</Button>
           <Button variant="outline" onClick={() => setShowExport(true)}>
             <FileDown className="mr-1 size-4" /> Export PDF
           </Button>
@@ -366,6 +381,7 @@ function SequenceEditor() {
             </div>
           ) : (
             <BuilderLibrary
+              key={seq.practice_type}
               poses={poses}
               categories={categories}
               subcategories={subcategories}

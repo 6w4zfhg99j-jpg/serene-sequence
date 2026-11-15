@@ -37,6 +37,8 @@ import { AboutSection } from "@/components/AboutSection";
 
 import { useT } from "@/lib/i18n";
 import { useCategoryLabel } from "@/lib/i18n/categories";
+import { usePractice } from "@/lib/practice-context";
+import { PracticeToggle } from "@/components/PracticeToggle";
 
 export const Route = createFileRoute("/manage")({
   head: () => ({
@@ -93,13 +95,15 @@ function ManagePage() {
 /* ------------------------------------------------------------------ */
 
 function CategoriesPanel() {
+  const { practice, setPractice } = usePractice();
   const t = useT();
   const catLabel = useCategoryLabel();
   const qc = useQueryClient();
-  const { data: categories = [] } = useQuery({
+  const { data: allCategories = [] } = useQuery({
     queryKey: ["categories"],
     queryFn: fetchCategories,
   });
+  const categories = allCategories.filter((c) => (c.practice_type ?? "yoga") === practice);
   const [newName, setNewName] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
@@ -113,7 +117,7 @@ function CategoriesPanel() {
   };
 
   const add = useMutation({
-    mutationFn: (name: string) => createCategory(name),
+    mutationFn: (name: string) => createCategory(name, practice),
     onSuccess: () => {
       setNewName("");
       refresh();
@@ -148,6 +152,7 @@ function CategoriesPanel() {
 
   return (
     <section>
+      <PracticeToggle value={practice} onChange={(p) => { setPractice(p); setExpandedId(null); setEditingId(null); setConfirmId(null); }} className="mb-4" />
       <PanelHeader title={t("manage.categories")} count={categories.length} />
 
       <form

@@ -102,6 +102,8 @@ export const uk: Dict = {
   "sequence.sideLeft": "Ліва",
   "sequence.export": "Експорт у PDF",
   "sequence.exportFailed": "Не вдалося експортувати",
+  "sequence.saveFailed": "Не вдалося зберегти зміни. Спробуйте ще раз.",
+  "sequence.saved": "Збережено",
   "sequence.includeNotes": "Додати нотатки до асан",
 
   "pose.new": "Нова асана",

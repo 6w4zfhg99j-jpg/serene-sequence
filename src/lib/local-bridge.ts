@@ -12,7 +12,9 @@ import type {
   Tag,
   Level,
   Difficulty,
+  PracticeType,
 } from "./yoga-api";
+import { browserLocalBridge } from "./browser-local";
 
 export interface LocalBridge {
   poses: {
@@ -36,7 +38,7 @@ export interface LocalBridge {
   };
   categories: {
     list(): Promise<Category[]>;
-    create(name: string): Promise<Category>;
+    create(name: string, practice?: PracticeType): Promise<Category>;
     update(id: string, name: string): Promise<void>;
     remove(id: string): Promise<void>;
     reorder(ids: string[]): Promise<void>;
@@ -123,7 +125,7 @@ declare global {
 
 export function localBridge(): LocalBridge | null {
   if (typeof window === "undefined") return null;
-  return window.yoga ?? null;
+  return window.yoga ?? browserLocalBridge;
 }
 
 export const isLocalMode = () => localBridge() !== null;

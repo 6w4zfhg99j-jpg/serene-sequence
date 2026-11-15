@@ -13,7 +13,7 @@ contextBridge.exposeInMainWorld("yoga", {
   },
   categories: {
     list: () => invoke("categories.list"),
-    create: (name) => invoke("categories.create", name),
+    create: (name, practice) => invoke("categories.create", name, practice),
     update: (id, name) => invoke("categories.update", id, name),
     remove: (id) => invoke("categories.remove", id),
     reorder: (ids) => invoke("categories.reorder", ids),

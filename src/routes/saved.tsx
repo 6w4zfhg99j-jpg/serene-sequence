@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { PracticeToggle } from "@/components/PracticeToggle";
-import type { PracticeType } from "@/lib/yoga-api";
+import { usePractice } from "@/lib/practice-context";
+import { toast } from "sonner";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
@@ -69,6 +70,8 @@ export const Route = createFileRoute("/saved")({
         property: "og:description",
         content: "Your saved yoga sequences, organized in editable folders.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: Home,
@@ -92,7 +95,7 @@ function Home() {
     queryKey: ["sequences"],
     queryFn: fetchSequences,
   });
-  const [practice, setPractice] = useState<PracticeType>("yoga");
+  const { practice, setPractice } = usePractice();
   const sequences = useMemo(
     () => allSequences.filter((s) => (s.practice_type ?? "yoga") === practice),
     [allSequences, practice],
@@ -121,6 +124,7 @@ function Home() {
   };
 
   const create = useMutation({
+    onError: () => toast.error(t("sequence.saveFailed")),
     mutationFn: () =>
       createSequence({
         title: newTitle.trim() || t("home.untitled"),
@@ -135,6 +139,7 @@ function Home() {
     },
   });
   const dup = useMutation({
+    onError: () => toast.error(t("sequence.saveFailed")),
     mutationFn: (id: string) => duplicateSequence(id),
     onSuccess: refreshAll,
   });
