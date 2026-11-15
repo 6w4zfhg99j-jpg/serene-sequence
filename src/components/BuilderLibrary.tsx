@@ -5,6 +5,8 @@ import { PoseImage } from "./PoseImage";
 import { Input } from "@/components/ui/input";
 import { useT } from "@/lib/i18n";
 import { useCategoryLabel } from "@/lib/i18n/categories";
+import { groupLibraryPoses, UNCATEGORIZED_ID } from "@/lib/pose-categories";
+import { Button } from "@/components/ui/button";
 
 const LS_KEY = "builder.categoryCollapse.v1";
 const COLS_KEY = "builder.cardsPerRow.v1";
@@ -20,7 +22,7 @@ function loadCols(): number {
   const v = Number(localStorage.getItem(COLS_KEY));
   return COL_OPTIONS.includes(v as (typeof COL_OPTIONS)[number]) ? v : 6;
 }
-const OTHER = "__other__";
+const OTHER = UNCATEGORIZED_ID;
 
 interface Props {
   poses: Pose[];
@@ -67,20 +69,9 @@ export function BuilderLibrary({ poses, categories, subcategories = [], onAdd }:
   }, [poses, search, favOnly]);
 
   const grouped = useMemo(() => {
-    const map = new Map<string, { cat: Category | null; poses: Pose[] }>();
-    for (const c of categories) map.set(c.id, { cat: c, poses: [] });
-    map.set(OTHER, { cat: null, poses: [] });
-    for (const p of filtered) {
-      if (p.categories.length === 0) {
-        map.get(OTHER)!.poses.push(p);
-      } else {
-        for (const c of p.categories) {
-          if (!map.has(c.id)) map.set(c.id, { cat: c, poses: [] });
-          map.get(c.id)!.poses.push(p);
-        }
-      }
-    }
-    return Array.from(map.values()).filter((g) => g.poses.length > 0);
+    return groupLibraryPoses(filtered, categories)
+      .map(({ category, poses }) => ({ cat: category, poses }))
+      .filter((g) => g.poses.length > 0 || g.cat === null);
   }, [filtered, categories]);
 
   const t = useT();
@@ -171,13 +162,13 @@ export function BuilderLibrary({ poses, categories, subcategories = [], onAdd }:
       </div>
 
       <div className="-mr-1 min-h-0 flex-1 overflow-y-auto overscroll-contain pb-8 pr-1">
-        {grouped.length === 0 && (
+        {filtered.length === 0 && (
           <p className="p-4 text-center text-xs text-ink-subtle">{t("library.noMatchTitle")}</p>
         )}
         {grouped.map((g) => {
           const id = g.cat?.id ?? OTHER;
           const isCollapsed = !!collapsed[id];
-          const label = g.cat ? catLabel(g.cat.name) : t("common.other");
+          const label = g.cat ? catLabel(g.cat.name) : t("common.uncategorized");
           const subs = subcategories
             .filter((s) => s.category_id === id)
             .sort((a, b) => a.sort_order - b.sort_order);
@@ -187,10 +178,11 @@ export function BuilderLibrary({ poses, categories, subcategories = [], onAdd }:
             : g.poses;
           return (
             <div key={id} className="mb-1">
-              <button
+              <Button variant="ghost"
                 type="button"
+                aria-expanded={!isCollapsed}
                 onClick={() => toggle(id)}
-                className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left hover:bg-background"
+                className="h-auto w-full justify-start gap-2 rounded px-2 py-1.5 text-left hover:bg-background"
               >
                 <ChevronRight
                   className={
@@ -201,7 +193,7 @@ export function BuilderLibrary({ poses, categories, subcategories = [], onAdd }:
                 />
                 <span className="text-sm font-medium">{label}</span>
                 <span className="text-xs text-ink-subtle">{visiblePoses.length}</span>
-              </button>
+              </Button>
               {!isCollapsed && subs.length > 0 && (
                 <div className="mt-1 flex flex-wrap gap-1 pl-6">
                   <button

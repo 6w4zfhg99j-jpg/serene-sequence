@@ -4,6 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Heart, Search } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { useCategoryLabel } from "@/lib/i18n/categories";
+import { matchesPoseCategory, UNCATEGORIZED_ID } from "@/lib/pose-categories";
+import { Button } from "@/components/ui/button";
 
 interface FiltersState {
   search: string;
@@ -24,8 +26,7 @@ export function usePoseFilters(poses: Pose[]) {
     const s = filters.search.trim().toLowerCase();
     return poses.filter((p) => {
       if (filters.favoritesOnly && !p.is_favorite) return false;
-      if (filters.categoryId && !p.categories.some((c) => c.id === filters.categoryId))
-        return false;
+      if (!matchesPoseCategory(p, filters.categoryId)) return false;
       if (
         filters.tagIds.length &&
         !filters.tagIds.every((tid) => p.tags.some((t) => t.id === tid))
@@ -100,19 +101,19 @@ export function PoseFiltersPanel({
       <div>
         <p className="label-eyebrow mb-2">{t("library.categories")}</p>
         <div className="flex flex-wrap gap-1.5">
-          <button
+          <Button type="button" variant="ghost" aria-pressed={!filters.categoryId}
             onClick={() => setFilters({ ...filters, categoryId: null })}
             className={
-              "rounded-full border px-2.5 py-0.5 text-xs " +
+              "h-auto rounded-full border px-2.5 py-0.5 text-xs " +
               (!filters.categoryId
                 ? "border-ink bg-ink text-background"
                 : "border-line text-ink-muted hover:border-ink-muted")
             }
           >
             {t("common.all")}
-          </button>
-          {categories.map((c) => (
-            <button
+          </Button>
+          {[...categories].sort((a, b) => a.sort_order - b.sort_order).map((c) => (
+            <Button type="button" variant="ghost" aria-pressed={filters.categoryId === c.id}
               key={c.id}
               onClick={() =>
                 setFilters({
@@ -121,15 +122,21 @@ export function PoseFiltersPanel({
                 })
               }
               className={
-                "rounded-full border px-2.5 py-0.5 text-xs transition-colors " +
+                "h-auto rounded-full border px-2.5 py-0.5 text-xs transition-colors " +
                 (filters.categoryId === c.id
                   ? "border-ink bg-ink text-background"
                   : "border-line text-ink-muted hover:border-ink-muted")
               }
             >
               {catLabel(c.name)}
-            </button>
+            </Button>
           ))}
+          <Button type="button" variant="ghost" aria-pressed={filters.categoryId === UNCATEGORIZED_ID}
+            onClick={() => setFilters({ ...filters, categoryId: filters.categoryId === UNCATEGORIZED_ID ? null : UNCATEGORIZED_ID })}
+            className={"h-auto rounded-full border px-2.5 py-0.5 text-xs transition-colors " +
+              (filters.categoryId === UNCATEGORIZED_ID ? "border-ink bg-ink text-background" : "border-line text-ink-muted hover:border-ink-muted")}>
+            {t("common.uncategorized")}
+          </Button>
         </div>
       </div>
 

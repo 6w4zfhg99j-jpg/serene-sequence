@@ -42,6 +42,8 @@ export interface Folder {
 
 export interface Pose {
   id: string;
+  /** Derived only in scoped library views; never stored as a category assignment. */
+  is_uncategorized?: boolean;
   practice_assignment?: PoseAssignment;
   name: string;
   sanskrit_name: string | null;

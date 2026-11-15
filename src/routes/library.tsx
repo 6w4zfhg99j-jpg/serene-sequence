@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { PracticeToggle } from "@/components/PracticeToggle";
 import { usePractice } from "@/lib/practice-context";
 import { scopePracticeLibrary } from "@/lib/practice-library";
+import { groupLibraryPoses } from "@/lib/pose-categories";
 import {
   DndContext,
   PointerSensor,
@@ -239,29 +240,7 @@ function CategoryGroupedGrid({
       const cat = categories.find((c) => c.id === filters.categoryId) ?? null;
       return [{ category: cat, poses }];
     }
-    const sorted = [...categories].sort((a, b) => a.sort_order - b.sort_order);
-    const byId = new Map<string, Pose[]>();
-    const uncategorized: Pose[] = [];
-    for (const p of poses) {
-      if (p.categories.length === 0) {
-        uncategorized.push(p);
-        continue;
-      }
-      for (const c of p.categories) {
-        const arr = byId.get(c.id) ?? [];
-        arr.push(p);
-        byId.set(c.id, arr);
-      }
-    }
-    const result: Group[] = [];
-    for (const c of sorted) {
-      const arr = byId.get(c.id);
-      result.push({ category: c, poses: arr ?? [] });
-    }
-    if (uncategorized.length) {
-      result.push({ category: null, poses: uncategorized });
-    }
-    return result;
+    return groupLibraryPoses(poses, categories);
   }, [poses, categories, filters.categoryId]);
 
   return (
