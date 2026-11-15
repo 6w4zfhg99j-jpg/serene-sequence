@@ -16,6 +16,11 @@ import { AppNav } from "@/components/AppNav";
 import { Toaster } from "@/components/ui/sonner";
 import { I18nProvider } from "@/lib/i18n";
 import { PracticeProvider } from "@/lib/practice-context";
+import {
+  installStaleChunkRecovery,
+  isStaleChunkError,
+  reloadForStaleChunk,
+} from "@/lib/stale-chunk-recovery";
 
 function NotFoundComponent() {
   return (
@@ -39,9 +44,11 @@ function NotFoundComponent() {
 
 function ErrorComponent({ error, reset }: ErrorComponentProps) {
   const router = useRouter();
+  const stale = isStaleChunkError(error);
   useEffect(() => {
+    if (stale && reloadForStaleChunk()) return;
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
-  }, [error]);
+  }, [error, stale]);
   return (
     <div className="flex min-h-screen items-center justify-center px-6">
       <div className="max-w-md text-center">
@@ -49,6 +56,10 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
         <p className="mt-3 text-sm text-ink-muted">{(error as Error).message}</p>
         <button
           onClick={() => {
+            if (stale) {
+              window.location.reload();
+              return;
+            }
             router.invalidate();
             reset();
           }}
@@ -107,6 +118,9 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  useEffect(() => {
+    installStaleChunkRecovery();
+  }, []);
   return (
     <QueryClientProvider client={queryClient}>
       <I18nProvider>
