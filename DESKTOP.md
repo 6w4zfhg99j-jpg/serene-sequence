@@ -27,6 +27,17 @@ What that single command does:
   library snapshot (2 poses, 12 categories per practice mode, subcategories and tags),
   with embedded photos. Personal browser sequences are not copied into an installer.
   Existing desktop poses, sequences and organization are not replaced.
+- Every exercise has a Library assignment: Yoga, Stretching, or Both Yoga and
+  Stretching. New exercises default to the active mode. Assignment is independent
+  of category links; Both has separately editable Yoga and Stretching categories.
+- Existing unassigned Yoga exercises stay Yoga, even if an older version copied
+  category links into Stretching. Legacy Stretching-only exercises stay Stretching.
+  No pose or category records are deleted. Choose Both explicitly to share an exercise.
+- Changing assignment keeps existing saved sequence items; their information is
+  always resolved from the same shared exercise. Removed membership hides an
+  exercise from that mode’s gallery and builder, not from saved practices.
+- The assignment upgrade stores a browser snapshot backup and creates a consistent
+  `vona.db.before-pose-assignment-v1.bak` for existing upgraded desktop workspaces.
 - Dev mode: `npm run dev` in one terminal, `npm run electron:dev` in another.
 - Config lives in `electron-builder.yml`; the app icon is `public/icon.png`.
 
@@ -63,11 +74,15 @@ Build dependencies may need internet during installation/build; runtime must not
 3. Run `npm run desktop:offline-check` from this project. It launches the installed
    app using a separate temporary profile, leaving personal work untouched.
 4. Open Pose Library; confirm both included photos. Search and filter categories
-   in both Yoga and Stretching. Add a new pose with a locally picked photo and notes.
+   in Yoga. Confirm existing Yoga poses are not automatically visible in Stretching.
+   Add Yoga-only, Stretching-only and Both poses with local photos and notes; check
+   visibility and independent category selections in both modes.
 5. Create a sequence in each mode. Add multiple poses, reorder them, remove one,
    edit pose notes and practice notes, and press Save.
 6. Open Saved Sequences, reopen and edit both sequences. Export PDF; inspect images
    and Ukrainian text. Create and rename a folder and move a sequence into it.
+   Change a shared pose to Yoga-only and edit its information; confirm an existing
+   Stretching sequence still retains that updated pose, while its library hides it.
 7. Quit VONA using Cmd+Q. The check relaunches the **same** offline test profile.
    Confirm new poses, photos, sequence order, notes and folder assignments remain.
 8. Record any failed steps. Test an upgrade separately using a **copy** of a real

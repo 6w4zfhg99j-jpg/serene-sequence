@@ -11,12 +11,13 @@ const pose: Pose = { id: "pose", name: "Shared pose", sanskrit_name: null, descr
 const snapshot = (): BrowserSnapshot => ({ categories: [yoga], subcategories: [{ id: "sub", name: "Hips", category_id: yoga.id, sort_order: 0 }], poses: [pose], sequences: [], tags: [], folders: [] });
 
 describe("separate practice organization", () => {
-  it("copies every category and subcategory to Stretching without duplicating poses", () => {
+  it("initializes independent categories without automatically sharing Yoga poses", () => {
     const state = prepareLocalLibrary(snapshot());
     expect(state.categories.map((c) => c.practice_type)).toEqual(["yoga", "stretching"]);
     expect(state.subcategories.map((s) => s.category_id)).toEqual(["yoga-cat", "stretching:yoga-cat"]);
     expect(state.poses.map((p) => p.id)).toEqual(["pose"]);
-    expect(state.poses[0].subcategory_ids).toEqual(["sub", "stretching:sub"]);
+    expect(state.poses[0].subcategory_ids).toEqual(["sub"]);
+    expect(state.poses[0].practice_assignment).toBe("yoga");
   });
   it("preserves existing Yoga data and repeats initialization without extra copies", () => {
     const state = prepareLocalLibrary(snapshot());
@@ -29,6 +30,8 @@ describe("separate practice organization", () => {
   it("keeps Stretching category edits independent while sharing pose identities", () => {
     const state = prepareLocalLibrary(snapshot());
     state.categories[1].name = "Mobility";
+    state.poses[0].practice_assignment = "both";
+    state.poses[0].categories.push(state.categories[1]);
     const stretching = scopePracticeLibrary(state.poses, state.categories, state.subcategories, "stretching");
     const yogaView = scopePracticeLibrary(state.poses, state.categories, state.subcategories, "yoga");
     expect(stretching.categories.map((c) => c.name)).toEqual(["Mobility"]);

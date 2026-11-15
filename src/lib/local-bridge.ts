@@ -15,6 +15,7 @@ import type {
   PracticeType,
 } from "./yoga-api";
 import { browserLocalBridge } from "./browser-local";
+import type { PoseAssignment } from "./pose-assignment";
 
 export interface LocalBridge {
   poses: {
@@ -28,6 +29,7 @@ export interface LocalBridge {
       difficulty: Difficulty;
       image_url?: string | null;
       is_favorite?: boolean;
+      practice_assignment?: PoseAssignment;
       subcategoryIds: string[];
       categoryIds: string[];
       tagIds: string[];

@@ -36,6 +36,8 @@ import {
 import { useT } from "@/lib/i18n";
 import { useCategoryLabel } from "@/lib/i18n/categories";
 import { usePractice } from "@/lib/practice-context";
+import { includesPractice, poseAssignment, type PoseAssignment } from "@/lib/pose-assignment";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 const DIFFICULTIES: Difficulty[] = ["beginner", "intermediate", "advanced"];
 
@@ -51,7 +53,6 @@ export function PoseFormDialog({ open, onOpenChange, pose }: Props) {
   const catLabel = useCategoryLabel();
   const qc = useQueryClient();
   const { data: allCategories = [] } = useQuery({ queryKey: ["categories"], queryFn: fetchCategories });
-  const categories = allCategories.filter((c) => (c.practice_type ?? "yoga") === practice);
   const { data: subcategories = [] } = useQuery({
     queryKey: ["subcategories"],
     queryFn: fetchSubcategories,
@@ -59,6 +60,8 @@ export function PoseFormDialog({ open, onOpenChange, pose }: Props) {
   const { data: tags = [] } = useQuery({ queryKey: ["tags"], queryFn: fetchTags });
 
   const [name, setName] = useState("");
+  const [assignment, setAssignment] = useState<PoseAssignment>(practice);
+  const categories = allCategories.filter((c) => includesPractice(assignment, c.practice_type ?? "yoga"));
   const [sanskrit, setSanskrit] = useState("");
   const [description, setDescription] = useState("");
   
@@ -74,6 +77,7 @@ export function PoseFormDialog({ open, onOpenChange, pose }: Props) {
   useEffect(() => {
     if (!open) return;
     setName(pose?.name ?? "");
+    setAssignment(pose ? poseAssignment(pose) : practice);
     setSanskrit(pose?.sanskrit_name ?? "");
     setDescription(pose?.description ?? "");
     
@@ -83,7 +87,7 @@ export function PoseFormDialog({ open, onOpenChange, pose }: Props) {
     setSubcategoryIds(pose?.subcategory_ids ?? []);
     setTagIds(pose?.tags.map((t) => t.id) ?? []);
     setNewTag("");
-  }, [open, pose]);
+  }, [open, pose, practice]);
 
   const { data: imgs } = useSignedImages([imagePath]);
   const imageUrl = resolveImage(imagePath, imgs);
@@ -113,6 +117,7 @@ export function PoseFormDialog({ open, onOpenChange, pose }: Props) {
         difficulty,
         image_url: imagePath,
         is_favorite: pose?.is_favorite ?? false,
+        practice_assignment: assignment,
         subcategoryIds,
         categoryIds,
         tagIds,
@@ -219,6 +224,16 @@ export function PoseFormDialog({ open, onOpenChange, pose }: Props) {
           {/* Fields */}
           <div className="space-y-3">
             <div>
+              <Label id="pose-assignment-label" className="mb-2 block">{t("pose.assignment")}</Label>
+              <ToggleGroup type="single" value={assignment} variant="outline" size="sm"
+                aria-labelledby="pose-assignment-label" className="flex-wrap justify-start"
+                onValueChange={(value) => { if (value === "yoga" || value === "stretching" || value === "both") setAssignment(value); }}>
+                <ToggleGroupItem value="yoga">{t("practice.yoga")}</ToggleGroupItem>
+                <ToggleGroupItem value="stretching">{t("practice.stretching")}</ToggleGroupItem>
+                <ToggleGroupItem value="both">{t("practice.both")}</ToggleGroupItem>
+              </ToggleGroup>
+            </div>
+            <div>
               <Label>{t("pose.name")}</Label>
               <Input value={name} onChange={(e) => setName(e.target.value)} autoFocus aria-label={t("pose.name")} />
             </div>
@@ -260,30 +275,22 @@ export function PoseFormDialog({ open, onOpenChange, pose }: Props) {
 
         <div className="space-y-3">
           <div>
-            <Label className="mb-2 block">{t("pose.categories")}</Label>
-            <div className="flex flex-wrap gap-1.5">
-              {categories.map((c) => {
-                const active = categoryIds.includes(c.id);
-                return (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() =>
-                      setCategoryIds((prev) =>
-                        active ? prev.filter((id) => id !== c.id) : [...prev, c.id]
-                      )
-                    }
-                    className={
-                      "rounded-full border px-3 py-1 text-xs transition-colors " +
-                      (active
-                        ? "border-ink bg-ink text-background"
-                        : "border-line text-ink-muted hover:border-ink-muted")
-                    }
-                  >
-                    {catLabel(c.name)}
-                  </button>
-                );
-              })}
+            <div className="space-y-3">
+              {(["yoga", "stretching"] as const).filter((mode) => includesPractice(assignment, mode)).map((mode) => (
+                <div key={mode} role="group" aria-label={t(mode === "yoga" ? "pose.yogaCategories" : "pose.stretchingCategories")}>
+                  <Label className="mb-2 block">{t(mode === "yoga" ? "pose.yogaCategories" : "pose.stretchingCategories")}</Label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {categories.filter((c) => (c.practice_type ?? "yoga") === mode).map((c) => {
+                      const active = categoryIds.includes(c.id);
+                      return <Button key={c.id} type="button" size="sm" variant={active ? "default" : "outline"}
+                        aria-pressed={active}
+                        onClick={() => setCategoryIds((prev) => active ? prev.filter((id) => id !== c.id) : [...prev, c.id])}>
+                        {catLabel(c.name)}
+                      </Button>;
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 

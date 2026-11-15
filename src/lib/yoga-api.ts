@@ -1,4 +1,5 @@
 import { localBridge } from "./local-bridge";
+import type { PoseAssignment } from "./pose-assignment";
 
 // No implicit Cloud fallback: core reads and writes always stay in this workspace.
 function requireLocal() {
@@ -41,6 +42,7 @@ export interface Folder {
 
 export interface Pose {
   id: string;
+  practice_assignment?: PoseAssignment;
   name: string;
   sanskrit_name: string | null;
   description: string | null;
@@ -126,6 +128,7 @@ export async function upsertPose(input: {
   difficulty: Difficulty;
   image_url?: string | null;
   is_favorite?: boolean;
+  practice_assignment?: PoseAssignment;
   subcategoryIds: string[];
   categoryIds: string[];
   tagIds: string[];

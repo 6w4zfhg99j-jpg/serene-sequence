@@ -1,5 +1,6 @@
 import type { Category, Folder, Pose, Sequence, Subcategory, Tag } from "./yoga-api";
 import { DEFAULT_CATEGORY_NAMES } from "./practice-library";
+import { legacyAssignment } from "./pose-assignment";
 
 export interface BrowserSnapshot {
   categories: Category[];
@@ -8,6 +9,7 @@ export interface BrowserSnapshot {
   tags: Tag[];
   folders: Folder[];
   sequences: Sequence[];
+  assignmentVersion?: number;
 }
 
 export function prepareLocalLibrary(snapshot: BrowserSnapshot): BrowserSnapshot {
@@ -24,16 +26,18 @@ export function prepareLocalLibrary(snapshot: BrowserSnapshot): BrowserSnapshot 
       state.categories.push({ ...category, id, practice_type: "stretching" });
       const categorySubs = subs.filter((s) => s.category_id === category.id);
       state.subcategories.push(...categorySubs.map((s) => ({ ...s, id: `stretching:${s.id}`, category_id: id })));
-      for (const pose of state.poses) {
-        if (pose.categories.some((c) => c.id === category.id)) pose.categories.push({ ...category, id, practice_type: "stretching" });
-        for (const sub of categorySubs) {
-          if (pose.subcategory_ids.includes(sub.id)) pose.subcategory_ids.push(`stretching:${sub.id}`);
-        }
-      }
     }
   }
   state.sequences.forEach((s) => { s.practice_type ??= "yoga"; });
+  migratePoseAssignments(state);
   return state;
+}
+
+export function migratePoseAssignments(state: BrowserSnapshot) {
+  for (const pose of state.poses) {
+    pose.practice_assignment ??= legacyAssignment(state.categories.filter((c) => pose.categories.some((link) => link.id === c.id)));
+  }
+  state.assignmentVersion = 1;
 }
 
 export function createBrowserStore(name = "vona.personal.v1") {
@@ -67,6 +71,12 @@ export function createBrowserStore(name = "vona.personal.v1") {
     read: () => transact("readonly", (state) => state),
     initialize: (snapshot: BrowserSnapshot) => transact("readwrite", (state, store) => {
       if (!state) store.put(prepareLocalLibrary(snapshot), "state");
+    }),
+    migrateAssignments: () => transact("readwrite", (state, store) => {
+      if (!state || state.assignmentVersion === 1) return;
+      store.put(structuredClone(state), "before-pose-assignment-v1");
+      migratePoseAssignments(state);
+      store.put(state, "state");
     }),
     change: <T,>(run: (state: BrowserSnapshot) => T) => transact("readwrite", (state, store) => {
       if (!state) throw new Error("Local workspace is not ready");

@@ -7,6 +7,7 @@ export function bundledLibrary(): BrowserSnapshot {
   const categories = library.categories.map((c) => ({ ...c, practice_type: "yoga" as const }));
   const poses: Pose[] = library.poses.map((p) => ({
     ...p,
+    practice_assignment: "yoga",
     difficulty: p.difficulty as Pose["difficulty"],
     categories: categories.filter((c) => library.pose_categories.some((link) => link.pose_id === p.id && link.category_id === c.id)),
     subcategory_ids: [...new Set([

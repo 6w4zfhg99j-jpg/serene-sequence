@@ -10,6 +10,10 @@ export const en = {
   "nav.savedSequences": "Saved Sequences",
   "practice.yoga": "Yoga",
   "practice.stretching": "Stretching",
+  "practice.both": "Both Yoga and Stretching",
+  "pose.assignment": "Library assignment",
+  "pose.yogaCategories": "Yoga categories",
+  "pose.stretchingCategories": "Stretching categories",
   "nav.settings": "Settings",
 
   // Common

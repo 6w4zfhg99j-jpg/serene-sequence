@@ -210,6 +210,14 @@ function migrate() {
     metaSet.run("default_categories", "v2");
   }
   seedLibrary(db);
+  if (!poseCols.includes("practice_assignment")) {
+    db.exec("ALTER TABLE poses ADD COLUMN practice_assignment TEXT NOT NULL DEFAULT 'yoga' CHECK (practice_assignment IN ('yoga', 'stretching', 'both'))");
+    // Preserve Stretching-only work, but never interpret automatically copied Yoga links as Both.
+    db.exec(`UPDATE poses SET practice_assignment = 'stretching'
+      WHERE EXISTS (SELECT 1 FROM pose_categories pc JOIN categories c ON c.id = pc.category_id WHERE pc.pose_id = poses.id AND c.practice_type = 'stretching')
+        AND NOT EXISTS (SELECT 1 FROM pose_categories pc JOIN categories c ON c.id = pc.category_id WHERE pc.pose_id = poses.id AND c.practice_type = 'yoga')`);
+  }
+  metaSet.run("pose_assignments_v1", "1");
   // Separate category/subcategory organization, never duplicate pose rows.
   if (!metaGet.get("stretching_categories_v1")) {
     db.transaction(() => {
@@ -217,12 +225,10 @@ function migrate() {
       for (const c of yogaCategories) {
         const id = randomUUID();
         db.prepare("INSERT INTO categories (id, name, sort_order, practice_type) VALUES (?, ?, ?, 'stretching')").run(id, c.name, c.sort_order);
-        db.prepare("INSERT OR IGNORE INTO pose_categories (pose_id, category_id) SELECT pose_id, ? FROM pose_categories WHERE category_id = ?").run(id, c.id);
         const subs = db.prepare("SELECT * FROM subcategories WHERE category_id = ?").all(c.id);
         for (const sub of subs) {
           const subId = randomUUID();
           db.prepare("INSERT INTO subcategories (id, category_id, name, sort_order) VALUES (?, ?, ?, ?)").run(subId, id, sub.name, sub.sort_order);
-          db.prepare("INSERT OR IGNORE INTO pose_subcategories (pose_id, subcategory_id) SELECT pose_id, ? FROM pose_subcategories WHERE subcategory_id = ?").run(subId, sub.id);
         }
       }
       metaSet.run("stretching_categories_v1", "1");
@@ -237,6 +243,7 @@ const unbool = (v) => !!v;
 function poseRow(row) {
   return {
     id: row.id,
+    practice_assignment: row.practice_assignment ?? "yoga",
     name: row.name,
     sanskrit_name: row.sanskrit_name,
     description: row.description,
@@ -301,7 +308,7 @@ function hydratePoseCategoriesTags(poses) {
 function listCategories() {
   return db
     .prepare(
-      `SELECT c.*, (SELECT COUNT(*) FROM pose_categories pc WHERE pc.category_id = c.id) AS pose_count
+      `SELECT c.*, (SELECT COUNT(*) FROM pose_categories pc JOIN poses p ON p.id = pc.pose_id WHERE pc.category_id = c.id AND (p.practice_assignment = 'both' OR p.practice_assignment = c.practice_type)) AS pose_count
        FROM categories c ORDER BY c.sort_order, c.name`,
     )
     .all();
@@ -341,7 +348,7 @@ function listSubcategories() {
   return db
     .prepare(
       `SELECT s.id, s.category_id, s.name, s.sort_order,
-        (SELECT COUNT(*) FROM pose_subcategories ps WHERE ps.subcategory_id = s.id) AS pose_count
+        (SELECT COUNT(*) FROM pose_subcategories ps JOIN poses p ON p.id = ps.pose_id JOIN categories c ON c.id = s.category_id WHERE ps.subcategory_id = s.id AND (p.practice_assignment = 'both' OR p.practice_assignment = c.practice_type)) AS pose_count
        FROM subcategories s ORDER BY s.sort_order, s.name`,
     )
     .all();
@@ -468,8 +475,10 @@ function savePose(input) {
   const subIds = input.subcategoryIds ?? (input.subcategory_id ? [input.subcategory_id] : []);
   const primarySub = subIds[0] ?? null;
   const existing = input.id
-    ? db.prepare("SELECT id FROM poses WHERE id = ?").get(id)
+    ? db.prepare("SELECT id, practice_assignment FROM poses WHERE id = ?").get(id)
     : null;
+  const categories = (input.categoryIds ?? []).map((cid) => db.prepare("SELECT practice_type FROM categories WHERE id = ?").get(cid));
+  const assignment = input.practice_assignment ?? existing?.practice_assignment ?? (categories.length > 0 && categories.every((c) => c?.practice_type === 'stretching') ? 'stretching' : 'yoga');
   if (existing) {
     db.prepare(
       `UPDATE poses SET
@@ -523,6 +532,7 @@ function savePose(input) {
   for (const sid of subIds) insSub.run(id, sid);
   const insTag = db.prepare("INSERT INTO pose_tags (pose_id, tag_id) VALUES (?, ?)");
   for (const tid of input.tagIds ?? []) insTag.run(id, tid);
+  db.prepare("UPDATE poses SET practice_assignment = ? WHERE id = ?").run(assignment, id);
   return id;
 }
 

@@ -58,7 +58,7 @@ describe("durable SQLite and filesystem work without a network", () => {
     db.init(join(workspace(), "vona.db"));
     expect(db.listPoses().map((p: any) => p.name)).toEqual(["kikikasana", "suddassna"]);
     expect(db.listPoses().every((p: any) => p.image_url.startsWith("data:image/"))).toBe(true);
-    expect(db.listPoses().every((p: any) => p.categories.length === 2)).toBe(true);
+    expect(db.listPoses().every((p: any) => p.categories.length === 1 && p.practice_assignment === "yoga")).toBe(true);
   });
   it("adds a photo and pose, edits and reorders a sequence, and keeps data after restarting", () => {
     const dir = workspace(); const file = join(dir, "vona.db");

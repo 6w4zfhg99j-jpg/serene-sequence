@@ -2,6 +2,7 @@ import type { LocalBridge } from "./local-bridge";
 import type { Pose, Sequence, SequenceListItem } from "./yoga-api";
 import { createBrowserStore, type BrowserSnapshot } from "./browser-store";
 import { bundledLibrary } from "./bundled-library";
+import { includesPractice, legacyAssignment, poseAssignment } from "./pose-assignment";
 
 const store = createBrowserStore();
 const now = () => new Date().toISOString();
@@ -19,7 +20,7 @@ function dataUrl(blob: Blob): Promise<string> {
 /** Initialize from bundled content, without waiting for connectivity or Cloud. */
 export function initializeBrowserWorkspace(): Promise<void> {
   initialization ??= (async () => {
-    if (await store.read()) return;
+    if (await store.read()) { await store.migrateAssignments(); return; }
     await store.initialize(bundledLibrary());
   })().catch((error) => { initialization = undefined; throw error; });
   return initialization;
@@ -72,11 +73,14 @@ export const browserLocalBridge: LocalBridge = {
     upsert: (input) => change((s) => {
       const id = input.id ?? crypto.randomUUID();
       const existing = s.poses.find((p) => p.id === id);
+      const assignedCategories = s.categories.filter((c) => input.categoryIds.includes(c.id));
+      const assignment = input.practice_assignment ?? (existing ? poseAssignment(existing) : legacyAssignment(assignedCategories));
       const pose: Pose = { ...input, id, sanskrit_name: input.sanskrit_name ?? null, description: input.description ?? null,
+        practice_assignment: assignment,
         duration_seconds: input.duration_seconds ?? null, image_url: input.image_url ?? null, is_favorite: input.is_favorite ?? false,
         created_at: existing?.created_at ?? now(), updated_at: now(), subcategory_id: input.subcategoryIds[0] ?? null,
         subcategory_ids: input.subcategoryIds, sort_order: existing?.sort_order ?? s.poses.length,
-        categories: s.categories.filter((c) => input.categoryIds.includes(c.id)), tags: s.tags.filter((t) => input.tagIds.includes(t.id)) };
+        categories: assignedCategories, tags: s.tags.filter((t) => input.tagIds.includes(t.id)) };
       s.poses = [...s.poses.filter((p) => p.id !== id), pose];
       return id;
     }),
@@ -85,7 +89,7 @@ export const browserLocalBridge: LocalBridge = {
     reorder: (ids) => change((s) => { ids.forEach((id, i) => { const p = s.poses.find((p) => p.id === id); if (p) p.sort_order = i; }); }),
   },
   categories: {
-    list: () => read((s) => s.categories.map((c) => ({ ...c, pose_count: s.poses.filter((p) => p.categories.some((x) => x.id === c.id)).length })).sort((a, b) => a.sort_order - b.sort_order)),
+    list: () => read((s) => s.categories.map((c) => ({ ...c, pose_count: s.poses.filter((p) => includesPractice(poseAssignment(p), c.practice_type ?? "yoga") && p.categories.some((x) => x.id === c.id)).length })).sort((a, b) => a.sort_order - b.sort_order)),
     create: (name, practice = "yoga") => change((s) => {
       const existing = s.categories.find((c) => c.name.toLowerCase() === name.trim().toLowerCase() && (c.practice_type ?? "yoga") === practice);
       if (existing) return existing;
@@ -102,7 +106,7 @@ export const browserLocalBridge: LocalBridge = {
     reorder: (ids) => change((s) => { ids.forEach((id, i) => { const c = s.categories.find((c) => c.id === id); if (c) c.sort_order = i; }); }),
   },
   subcategories: {
-    list: () => read((s) => s.subcategories.map((c) => ({ ...c, pose_count: s.poses.filter((p) => p.subcategory_ids.includes(c.id)).length }))),
+    list: () => read((s) => s.subcategories.map((c) => ({ ...c, pose_count: s.poses.filter((p) => includesPractice(poseAssignment(p), s.categories.find((category) => category.id === c.category_id)?.practice_type ?? "yoga") && p.subcategory_ids.includes(c.id)).length }))),
     create: (category_id, name) => change((s) => {
       const existing = s.subcategories.find((c) => c.category_id === category_id && c.name.toLowerCase() === name.trim().toLowerCase());
       if (existing) return existing;

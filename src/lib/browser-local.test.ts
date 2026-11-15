@@ -36,7 +36,8 @@ describe("account-free sequence workflow", () => {
     for (const name of ["kikikasana", "suddassna"]) {
       const pose = poses.find((p) => p.name === name);
       expect(pose?.image_url?.startsWith("data:image/")).toBe(true);
-      expect(pose?.categories.map((c) => c.practice_type).sort()).toEqual(["stretching", "yoga"]);
+      expect(pose?.categories.map((c) => c.practice_type)).toEqual(["yoga"]);
+      expect(pose?.practice_assignment).toBe("yoga");
     }
   });
   it("keeps Yoga as the default and preserves it through editing", async () => {

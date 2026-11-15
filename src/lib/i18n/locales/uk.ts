@@ -7,6 +7,10 @@ export const uk: Dict = {
   "nav.savedSequences": "Збережені",
   "practice.yoga": "Йога",
   "practice.stretching": "Стретчинг",
+  "practice.both": "Йога та стретчинг",
+  "pose.assignment": "Належність до бібліотеки",
+  "pose.yogaCategories": "Категорії йоги",
+  "pose.stretchingCategories": "Категорії стретчингу",
   "nav.settings": "Налаштування",
 
   "common.loading": "Завантаження...",

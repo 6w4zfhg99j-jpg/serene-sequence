@@ -27,8 +27,9 @@ describe("existing desktop data upgrade", () => {
     const poses = db.listPoses();
     const original = poses.find((p: any) => p.id === poseId);
     expect(poses).toHaveLength(3);
-    expect(original.categories.map((c: any) => c.practice_type).sort()).toEqual(["stretching", "yoga"]);
-    expect(original.subcategory_ids).toHaveLength(2);
+    expect(original.categories.map((c: any) => c.practice_type)).toEqual(["yoga"]);
+    expect(original.subcategory_ids).toHaveLength(1);
+    expect(original.practice_assignment).toBe("yoga");
     expect(original.description).toBe("**Bold note**");
     expect(original.image_url).toBe("local://test.jpg");
     const id = db.createSequence({ title: "Stretching", practice_type: "stretching" });

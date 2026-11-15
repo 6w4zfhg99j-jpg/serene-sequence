@@ -314,6 +314,7 @@ function LibraryPage() {
   const { data: tags = [] } = useQuery({ queryKey: ["tags"], queryFn: fetchTags });
   const { poses, categories, subcategories } = useMemo(() => scopePracticeLibrary(allPoses, allCategories, allSubcategories, practice), [allPoses, allCategories, allSubcategories, practice]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const eligibleSelectedIds = selectedIds.filter((id) => poses.some((pose) => pose.id === id));
   const [editing, setEditing] = useState<Pose | null>(null);
   const [creating, setCreating] = useState(false);
   const { filters, setFilters, filtered } = usePoseFilters(poses);
@@ -321,7 +322,7 @@ function LibraryPage() {
   const start = useMutation({
     mutationFn: async () => {
       const id = await createSequence({ title: t("home.untitled"), practice_type: practice });
-      try { for (const poseId of selectedIds) await addPoseToSequence(id, poseId); }
+      try { for (const poseId of eligibleSelectedIds) await addPoseToSequence(id, poseId); }
       catch (error) { await purgeSequence(id); throw error; }
       return id;
     },
@@ -368,7 +369,7 @@ function LibraryPage() {
           </h1>
         </div>
         <div className="flex flex-wrap gap-2">
-        <Button variant="outline" onClick={() => start.mutate()} disabled={start.isPending}>{t("builder.start")}{selectedIds.length > 0 && <span>({selectedIds.length})</span>}</Button>
+        <Button variant="outline" onClick={() => start.mutate()} disabled={start.isPending}>{t("builder.start")}{eligibleSelectedIds.length > 0 && <span>({eligibleSelectedIds.length})</span>}</Button>
         <Button onClick={() => setCreating(true)}>
           <Plus className="mr-1 size-4" />
           {t("library.newPose")}
@@ -413,7 +414,7 @@ function LibraryPage() {
               onEdit={(p) => setEditing(allPoses.find((original) => original.id === p.id) ?? p)}
               onFavorite={(p) => fav.mutate(p)}
               onReorder={handleReorder}
-              selectedIds={selectedIds}
+              selectedIds={eligibleSelectedIds}
               onSelect={(p) => setSelectedIds((ids) => ids.includes(p.id) ? ids.filter((id) => id !== p.id) : [...ids, p.id])}
             />
           )}

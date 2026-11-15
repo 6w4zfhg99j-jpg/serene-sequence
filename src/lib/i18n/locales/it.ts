@@ -7,6 +7,10 @@ export const it: Dict = {
   "nav.savedSequences": "Sequenze Salvate",
   "practice.yoga": "Yoga",
   "practice.stretching": "Stretching",
+  "practice.both": "Yoga e Stretching",
+  "pose.assignment": "Assegnazione alla libreria",
+  "pose.yogaCategories": "Categorie Yoga",
+  "pose.stretchingCategories": "Categorie Stretching",
   "nav.settings": "Impostazioni",
 
   "common.loading": "Caricamento...",
