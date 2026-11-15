@@ -1,9 +1,29 @@
-import library from "../../electron/library.json";
+import libraryUrl from "../../electron/library.json?url";
 import type { BrowserSnapshot } from "./browser-store";
 import type { Pose } from "./yoga-api";
 
+type LibraryFile = typeof import("../../electron/library.json");
+
+/**
+ * Loads the bundled library file on demand (first launch only). It is fetched as a plain
+ * local file instead of being imported as code, because a multi-megabyte module makes
+ * Safari fail every page load with "Importing a module script failed".
+ */
+async function loadLibraryFile(): Promise<LibraryFile> {
+  if (typeof window !== "undefined" && typeof fetch === "function") {
+    try {
+      const response = await fetch(libraryUrl);
+      if (response.ok) return (await response.json()) as LibraryFile;
+    } catch {
+      // fall through to the module import (tests, unusual runtimes)
+    }
+  }
+  return (await import("../../electron/library.json")).default as LibraryFile;
+}
+
 /** An immutable, locally bundled copy of the public library; never personal sequences. */
-export function bundledLibrary(): BrowserSnapshot {
+export async function bundledLibrary(): Promise<BrowserSnapshot> {
+  const library = await loadLibraryFile();
   const categories = library.categories.map((c) => ({ ...c, practice_type: "yoga" as const }));
   const poses: Pose[] = library.poses.map((p) => ({
     ...p,

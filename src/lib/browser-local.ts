@@ -21,7 +21,7 @@ function dataUrl(blob: Blob): Promise<string> {
 export function initializeBrowserWorkspace(): Promise<void> {
   initialization ??= (async () => {
     if (await store.read()) { await store.migrateAssignments(); return; }
-    await store.initialize(bundledLibrary());
+    await store.initialize(await bundledLibrary());
   })().catch((error) => { initialization = undefined; throw error; });
   return initialization;
 }

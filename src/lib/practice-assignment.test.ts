@@ -69,13 +69,13 @@ describe("explicit exercise membership in local browser storage", () => {
 });
 
 describe("non-destructive assignment upgrades", () => {
-  it("never automatically shares bundled Yoga poses on first launch", () => {
-    const state = prepareLocalLibrary(bundledLibrary());
+  it("never automatically shares bundled Yoga poses on first launch", async () => {
+    const state = prepareLocalLibrary(await bundledLibrary());
     expect(scopePracticeLibrary(state.poses, state.categories, state.subcategories, "stretching").poses).toEqual([]);
     expect(state.poses.map((p) => p.practice_assignment)).toEqual(["yoga", "yoga"]);
   });
-  it("preserves all legacy rows and links without treating historical Yoga copies as Both", () => {
-    const state = prepareLocalLibrary(bundledLibrary());
+  it("preserves all legacy rows and links without treating historical Yoga copies as Both", async () => {
+    const state = prepareLocalLibrary(await bundledLibrary());
     const yoga = state.poses[0]; delete yoga.practice_assignment;
     const stretching = state.categories.find((c) => c.practice_type === "stretching");
     if (!stretching) throw new Error("Missing category");

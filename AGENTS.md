@@ -19,3 +19,4 @@
 - Bundle UI fonts and public-library photos locally; seed SQLite once with stable IDs without replacing existing rows — why: offline rendering and first launch must not rely on CDN or Cloud availability.
 - Poses persist practice_assignment independently of categories; gallery and builder use the same membership filter, while sequence readback resolves shared pose IDs without membership filtering — why: section changes must not remove saved sequence items or fork exercise edits.
 - Missing legacy pose membership defaults to Yoga, except records linked exclusively to Stretching; retain all category links and back up before the additive local upgrade — why: automatic historical Yoga category copies must not become implicit shared membership.
+- Load the bundled library JSON with a ?url fetch only when initializing a new browser workspace, never as a static module import — why: a multi-megabyte module makes Safari fail page loads.
