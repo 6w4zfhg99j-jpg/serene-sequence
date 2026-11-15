@@ -1,6 +1,7 @@
 // electron/db.cjs — SQLite persistence for the local desktop mode.
 const Database = require("better-sqlite3");
 const { randomUUID } = require("crypto");
+const { seedLibrary, backupBeforeUpgrade } = require("./library-seed.cjs");
 
 let db;
 
@@ -29,9 +30,26 @@ const LEGACY_DEFAULT_CATEGORIES = [
 ];
 
 function init(dbPath) {
+  close();
   db = new Database(dbPath);
+  backupBeforeUpgrade(db, dbPath);
   db.pragma("journal_mode = WAL");
   db.pragma("foreign_keys = ON");
+
+  try {
+    db.transaction(() => migrate())();
+  } catch (error) {
+    close();
+    throw error;
+  }
+}
+
+function close() {
+  if (db?.open) db.close();
+  db = undefined;
+}
+
+function migrate() {
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS categories (
@@ -154,7 +172,6 @@ function init(dbPath) {
   }
   db.exec("CREATE INDEX IF NOT EXISTS idx_sequences_folder ON sequences(folder_id)");
   db.exec("CREATE INDEX IF NOT EXISTS idx_folders_parent ON folders(parent_id)");
-  purgeExpiredTrash();
 
 
   db.exec("CREATE TABLE IF NOT EXISTS app_meta (key TEXT PRIMARY KEY, value TEXT)");
@@ -192,6 +209,7 @@ function init(dbPath) {
     });
     metaSet.run("default_categories", "v2");
   }
+  seedLibrary(db);
   // Separate category/subcategory organization, never duplicate pose rows.
   if (!metaGet.get("stretching_categories_v1")) {
     db.transaction(() => {
@@ -442,6 +460,10 @@ function listPoses() {
 }
 
 function upsertPose(input) {
+  return db.transaction(() => savePose(input))();
+}
+
+function savePose(input) {
   const id = input.id ?? randomUUID();
   const subIds = input.subcategoryIds ?? (input.subcategory_id ? [input.subcategory_id] : []);
   const primarySub = subIds[0] ?? null;
@@ -873,6 +895,7 @@ function reorderSequenceItems(sequenceId, orderedIds) {
 
 module.exports = {
   init,
+  close,
   listCategories,
   createCategory,
   updateCategory,

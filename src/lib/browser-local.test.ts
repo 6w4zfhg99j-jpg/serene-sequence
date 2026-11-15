@@ -7,6 +7,7 @@ beforeAll(() => vi.stubGlobal("navigator", { onLine: false }));
 
 describe("account-free sequence workflow", () => {
   it("creates, saves, reopens and edits Stretching locally without a cloud request", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Network disconnected"));
     const id = await bridge.sequences.create({ title: "Mobility", practice_type: "stretching" });
     const categories = await bridge.categories.list();
     const category = categories.find((c) => c.practice_type === "stretching");
@@ -27,6 +28,16 @@ describe("account-free sequence workflow", () => {
     const copy = await bridge.sequences.get(await bridge.sequences.duplicate(id));
     expect(copy.practice_type).toBe("stretching");
     expect(copy.items[0].notes).toBe("Hold gently");
+    expect(fetchSpy).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
+  });
+  it("opens the entire bundled pose library and images while disconnected", async () => {
+    const poses = await bridge.poses.list();
+    for (const name of ["kikikasana", "suddassna"]) {
+      const pose = poses.find((p) => p.name === name);
+      expect(pose?.image_url?.startsWith("data:image/")).toBe(true);
+      expect(pose?.categories.map((c) => c.practice_type).sort()).toEqual(["stretching", "yoga"]);
+    }
   });
   it("keeps Yoga as the default and preserves it through editing", async () => {
     const id = await bridge.sequences.create({ title: "Yoga" });

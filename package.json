@@ -16,7 +16,9 @@
     "format": "prettier --write .",
     "electron:dev": "ELECTRON_START_URL=http://localhost:8080 electron .",
     "build:desktop": "ELECTRON_BUILD=1 vite build",
-    "desktop:dmg": "npm run desktop:clean && npm run build:desktop && electron-builder install-app-deps && electron-builder --mac dmg --arm64",
+    "desktop:dmg": "npm run desktop:clean && npm run build:desktop && npm run desktop:verify && electron-builder install-app-deps --platform=darwin --arch=arm64 && electron-builder --mac dmg --arm64",
+    "desktop:verify": "node electron/verify-bundle.cjs",
+    "desktop:offline-check": "node electron/offline-check.cjs",
     "desktop:clean": "rm -rf release dist"
   },
   "dependencies": {

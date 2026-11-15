@@ -28,8 +28,10 @@ const STORAGE_KEY = "vona.language.v1";
 
 function readStored(): LangCode | null {
   if (typeof window === "undefined") return null;
-  const v = window.localStorage.getItem(STORAGE_KEY);
-  return v && v in CATALOGS ? (v as LangCode) : null;
+  try {
+    const v = window.localStorage.getItem(STORAGE_KEY);
+    return v && v in CATALOGS ? (v as LangCode) : null;
+  } catch { return null; }
 }
 
 interface I18nValue {

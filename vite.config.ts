@@ -7,7 +7,7 @@
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 // When building the offline Electron desktop app we emit a static SPA shell
-// (dist/client/index.html) so the renderer can boot from file:// with no server.
+// (dist/client/index.html) so the renderer can boot from app://vona with no server.
 const isElectron = process.env.ELECTRON_BUILD === "1";
 
 export default defineConfig({
@@ -16,7 +16,7 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
     ...(isElectron
-      ? { spa: { enabled: true, prerender: { outputPath: "/index.html" } } }
+      ? { start: { entry: "start-desktop" }, spa: { enabled: true, prerender: { outputPath: "/index.html" } } }
       : {}),
   },
   // The Electron shell serves dist/client over a custom app:// scheme, so it

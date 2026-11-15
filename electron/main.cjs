@@ -1,16 +1,19 @@
 // electron/main.cjs — Electron main process
-const { app, BrowserWindow, protocol, ipcMain, dialog, net } = require("electron");
+const { app, BrowserWindow, protocol, ipcMain, dialog, net, session } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const { pathToFileURL } = require("url");
 
-const db = require("./db.cjs");
-const images = require("./images.cjs");
-
-const isDev = !!process.env.ELECTRON_START_URL;
+const { developmentUrl, clientFile, allowedRequest } = require("./runtime.cjs");
+let db;
+let images;
+const devUrl = developmentUrl(app.isPackaged, process.env.ELECTRON_START_URL);
+const isDev = Boolean(devUrl);
 
 // Menu bar / Dock title (matches productName in electron-builder.yml).
 app.setName("VONA");
+// The test runner supplies a separate temporary profile; never touch personal work.
+if (process.env.VONA_OFFLINE_TEST_DATA) app.setPath("userData", process.env.VONA_OFFLINE_TEST_DATA);
 
 // The renderer is a static SPA built into dist/client. It references its assets
 // with absolute paths ("/assets/..."), which cannot resolve over file://.
@@ -51,23 +54,26 @@ function createWindow() {
     },
   });
 
-  if (isDev) {
-    win.loadURL(process.env.ELECTRON_START_URL);
-  } else {
-    win.loadURL("app://vona/");
-  }
+  win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  win.webContents.on("will-navigate", (event, url) => {
+    if (!allowedRequest(url, devUrl) || !["app:", "http:", "https:"].includes(new URL(url).protocol)) event.preventDefault();
+  });
+  win.loadURL(devUrl ?? "app://vona/").catch((error) => {
+    dialog.showErrorBox("VONA could not load", `The locally bundled interface could not open. Your saved data has not been removed.\n\n${error.message}`);
+  });
 }
 
 function serveClient(imgDir) {
   // app:// — the built SPA, with a fallback to index.html for client routes.
   protocol.handle("app", async (request) => {
-    const { pathname } = new URL(request.url);
-    const rel = decodeURIComponent(pathname).replace(/^\/+/, "");
-    let file = path.join(CLIENT_DIR, rel);
-    if (!file.startsWith(CLIENT_DIR) || !rel || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
-      file = path.join(CLIENT_DIR, "index.html");
+    try {
+      const navigation = request.mode === "navigate" || request.headers.get("accept")?.includes("text/html");
+      const file = clientFile(CLIENT_DIR, request.url, Boolean(navigation));
+      if (!file || !fs.existsSync(file)) return new Response("Not found", { status: 404 });
+      return net.fetch(pathToFileURL(file).toString());
+    } catch {
+      return new Response("Not found", { status: 404 });
     }
-    return net.fetch(pathToFileURL(file).toString());
   });
 
   // local:// — user photos stored in the app data folder.
@@ -98,6 +104,9 @@ app.whenReady().then(() => {
   const { dir, imgDir } = ensureDirs();
 
   try {
+    if (!isDev && !fs.existsSync(path.join(CLIENT_DIR, "index.html"))) throw new Error("The desktop interface is missing. Build VONA using desktop:dmg, not the web build.");
+    db = require("./db.cjs");
+    images = require("./images.cjs");
     db.init(path.join(dir, "vona.db"));
     images.init(imgDir);
   } catch (err) {
@@ -110,6 +119,10 @@ app.whenReady().then(() => {
   }
 
   serveClient(imgDir);
+  // The desktop core has no online features: do not allow accidental Cloud/CDN calls.
+  session.defaultSession.webRequest.onBeforeRequest((details, callback) => {
+    callback({ cancel: !allowedRequest(details.url, devUrl) });
+  });
 
   // ---------- IPC handlers ----------
   // Wrap every handler so a failure surfaces in the renderer instead of
@@ -117,6 +130,8 @@ app.whenReady().then(() => {
   const handle = (channel, fn) => {
     ipcMain.handle(channel, async (event, ...args) => {
       try {
+        const origin = event.senderFrame?.url;
+        if (!origin || !allowedRequest(origin, devUrl)) throw new Error("Untrusted storage request");
         return await fn(event, ...args);
       } catch (err) {
         console.error(`[ipc] ${channel} failed:`, err);
@@ -195,3 +210,5 @@ app.whenReady().then(() => {
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
 });
+
+app.on("before-quit", () => db?.close());

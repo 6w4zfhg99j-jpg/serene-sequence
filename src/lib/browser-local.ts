@@ -1,10 +1,10 @@
 import type { LocalBridge } from "./local-bridge";
 import type { Pose, Sequence, SequenceListItem } from "./yoga-api";
 import { createBrowserStore, type BrowserSnapshot } from "./browser-store";
+import { bundledLibrary } from "./bundled-library";
 
 const store = createBrowserStore();
 const now = () => new Date().toISOString();
-const empty = (): BrowserSnapshot => ({ categories: [], subcategories: [], poses: [], tags: [], folders: [], sequences: [] });
 let initialization: Promise<void> | undefined;
 
 function dataUrl(blob: Blob): Promise<string> {
@@ -16,56 +16,11 @@ function dataUrl(blob: Blob): Promise<string> {
   });
 }
 
-/** Copy the existing read-only web library once; never write back to Cloud. */
+/** Initialize from bundled content, without waiting for connectivity or Cloud. */
 export function initializeBrowserWorkspace(): Promise<void> {
   initialization ??= (async () => {
     if (await store.read()) return;
-    const state = empty();
-    if (navigator.onLine) {
-      const { supabase } = await import("@/integrations/supabase/client");
-      const results = await Promise.all([
-        supabase.from("categories").select("*").order("sort_order"),
-        supabase.from("subcategories").select("*").order("sort_order"),
-        supabase.from("tags").select("*"),
-        supabase.from("folders").select("*").order("sort_order"),
-        supabase.from("poses").select("*, categories:pose_categories(category:categories(*)), subs:pose_subcategories(subcategory_id), tags:pose_tags(tag:tags(*))").order("sort_order"),
-        supabase.from("sequences").select("*, items:sequence_poses(*), tags:sequence_tags(tag:tags(*))"),
-      ]);
-      const failure = results.find((r) => r.error)?.error;
-      if (failure) throw failure;
-      const [cats, subs, tags, folders, poses, sequences] = results;
-      state.categories = cats.data ?? [];
-      state.subcategories = subs.data ?? [];
-      state.tags = tags.data ?? [];
-      state.folders = folders.data ?? [];
-      state.poses = (poses.data ?? []).map((p) => ({ ...p,
-        difficulty: p.difficulty as Pose["difficulty"],
-        categories: p.categories.flatMap((r) => r.category ? [r.category] : []),
-        tags: p.tags.flatMap((r) => r.tag ? [r.tag] : []),
-        subcategory_ids: [...new Set([...p.subs.map((r) => r.subcategory_id), ...(p.subcategory_id ? [p.subcategory_id] : [])])],
-      }));
-      await Promise.all(state.poses.map(async (pose) => {
-        if (!pose.image_url || pose.image_url.startsWith("data:")) return;
-        let url = pose.image_url;
-        if (!url.startsWith("https://") && !url.startsWith("http://")) {
-          const { data, error } = await supabase.storage.from("pose-images").createSignedUrl(url, 60);
-          if (error) throw error;
-          url = data.signedUrl;
-        }
-        const response = await fetch(url);
-        if (!response.ok) throw new Error("Image could not be copied locally");
-        pose.image_url = await dataUrl(await response.blob());
-      }));
-      state.sequences = (sequences.data ?? []).map((s) => ({ ...s,
-        level: s.level as Sequence["level"], practice_type: s.practice_type === "stretching" ? "stretching" : "yoga",
-        tags: s.tags.flatMap((r) => r.tag ? [r.tag] : []),
-        items: s.items.flatMap((it) => {
-          const pose = state.poses.find((p) => p.id === it.pose_id);
-          return pose ? [{ ...it, pose }] : [];
-        }).sort((a, b) => a.position - b.position),
-      }));
-    }
-    await store.initialize(state);
+    await store.initialize(bundledLibrary());
   })().catch((error) => { initialization = undefined; throw error; });
   return initialization;
 }

@@ -121,6 +121,10 @@ export function PoseFormDialog({ open, onOpenChange, pose }: Props) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["poses"] });
       qc.invalidateQueries({ queryKey: ["tags"] });
+      qc.invalidateQueries({ queryKey: ["sequence"] });
+      qc.invalidateQueries({ queryKey: ["sequences"] });
+      qc.invalidateQueries({ queryKey: ["categories"] });
+      qc.invalidateQueries({ queryKey: ["subcategories"] });
       toast.success(pose ? t("pose.updated") : t("pose.added"));
       onOpenChange(false);
     },
@@ -132,6 +136,8 @@ export function PoseFormDialog({ open, onOpenChange, pose }: Props) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["poses"] });
       toast.success(t("pose.deleted"));
+      qc.invalidateQueries({ queryKey: ["sequence"] });
+      qc.invalidateQueries({ queryKey: ["sequences"] });
       onOpenChange(false);
     },
   });
@@ -214,7 +220,7 @@ export function PoseFormDialog({ open, onOpenChange, pose }: Props) {
           <div className="space-y-3">
             <div>
               <Label>{t("pose.name")}</Label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+              <Input value={name} onChange={(e) => setName(e.target.value)} autoFocus aria-label={t("pose.name")} />
             </div>
             <div>
               <Label>{t("pose.sanskrit")}</Label>

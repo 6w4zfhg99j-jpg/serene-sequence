@@ -1,5 +1,5 @@
 // Runtime bridge to the Electron main process (window.yoga).
-// When present, all data operations go through SQLite + FS instead of Supabase.
+// Core data operations always use SQLite + FS or browser IndexedDB.
 
 import type {
   Category,
@@ -125,7 +125,12 @@ declare global {
 
 export function localBridge(): LocalBridge | null {
   if (typeof window === "undefined") return null;
-  return window.yoga ?? browserLocalBridge;
+  if (window.yoga) return window.yoga;
+  // A broken preload must never silently open a different, empty workspace.
+  if (window.location.protocol === "app:" || /Electron\//.test(window.navigator.userAgent)) {
+    throw new Error("The VONA desktop storage bridge is unavailable. Please reinstall VONA without removing its application data.");
+  }
+  return browserLocalBridge;
 }
 
 export const isLocalMode = () => localBridge() !== null;

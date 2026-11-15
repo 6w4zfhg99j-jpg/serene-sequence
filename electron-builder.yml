@@ -13,6 +13,9 @@ files:
   - package.json
   - node_modules/**/*
   - "!**/*.map"
+  - "!electron/*.test.ts"
+  - "!electron/offline-check.cjs"
+  - "!electron/verify-bundle.cjs"
 
 
 # better-sqlite3 is a native module and must stay outside the asar archive.

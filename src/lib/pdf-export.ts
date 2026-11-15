@@ -138,7 +138,8 @@ async function loadImageAsDataUrl(url: string): Promise<LoadedImage | null> {
     console.error("[pdf] could not load image", url, err);
     result = null;
   }
-  imageCache.set(url, result);
+  // A temporary image failure must not poison every subsequent export.
+  if (result) imageCache.set(url, result);
   return result;
 }
 
